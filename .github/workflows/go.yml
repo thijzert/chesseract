@@ -1,0 +1,36 @@
+name: Go
+
+on:
+  push:
+    paths:
+      - '**/*.go'
+  pull_request:
+    paths:
+      - '**/*.go'
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Determine version
+      id: tagger
+      uses: jimschubert/query-tag-action@3ed7ce2db476c9ceb4be8fb46fcc1b99d1f02e54
+      with:
+        include: 'v*'
+        exclude: '*-rc*'
+        commit-ish: 'HEAD'
+        abbrev: 7
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15
+
+    - name: Build
+      run: go run build.go -version "${{steps.tagger.outputs.tag}}"
+
+    - name: Test
+      run: go test -v ./...

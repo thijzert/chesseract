@@ -16,6 +16,6 @@ func main() {
 }
 
 func run() error {
-	fmt.Printf("Package version: %s. Hello, world!\n", chesseract.PackageVersion)
+	fmt.Printf("Package version: %s.  Hello, world!\n", chesseract.PackageVersion)
 	return nil
 }
