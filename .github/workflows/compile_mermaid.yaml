@@ -24,7 +24,7 @@ jobs:
           echo ${{ steps.getfile.outputs.files }}
 
       - name: compile mermaid
-        uses: neenjaw/compile-mermaid-markdown-action@3e7d651f458f723ac67d1b18431bf77f06fbb068
+        uses: thijzert/compile-mermaid-markdown-action@master
         with:
           files: ${{ steps.getfile.outputs.files }}
           output: '.resources'
@@ -41,7 +41,8 @@ jobs:
         run: |
           git config --local user.email "github-actions@users.noreply.github.com"
           git config --local user.name "GitHub Actions [bot]"
-          git commit -m "Recompile diagrams" -a
+          git add ".resources"
+          git commit -m "Recompile diagrams"
 
       - name: Push changes
         uses: ad-m/github-push-action@65392840bda2e774394d5cd38ca33e5918aec2d3
