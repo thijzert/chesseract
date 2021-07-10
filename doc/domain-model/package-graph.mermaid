@@ -1,0 +1,84 @@
+flowchart BT
+
+subgraph pmain ["cmd/chesseract"]
+
+	main["func main()"]
+
+end
+
+main --> chesseract
+main --> web-server
+main --> sqlbackend
+main --> renderer
+main --> gameui
+main --> gamestuff
+main --> win31
+
+subgraph chesseract
+	direction LR
+	Match
+	Board
+	Piece
+end
+
+subgraph gamestuff ["chesseract/game"]
+	direction LR
+	Player
+	Game
+end
+
+gamestuff --> chesseract
+
+
+subgraph backends["internal/storage/sql"]
+	sqlbackend[Backend]
+end
+
+subgraph plumbing ["internal/web-plumbing"]
+	direction LR
+	web-server[Server]
+end
+
+plumbing --> web
+
+subgraph web ["web"]
+	direction LR
+	HomeHandler
+	MatchHandler
+end
+
+web --> chesseract
+web --> gamestuff
+
+subgraph renderer ["internal/renderer"]
+	direction LR
+	Model
+	AnimationManager
+end
+
+renderer --> Game
+
+subgraph ui ["internal/ui"]
+	direction LR
+	Layer
+	EventTarget
+	Layout
+end
+
+subgraph win31 ["internal/ui/themes"]
+	direction LR
+	Theme
+end
+
+Theme --> ui
+
+subgraph gameui ["internal/ui/gameui"]
+	direction LR
+	%% DebugLayer
+	OSDLayer
+	%% MenuLayer
+	DialogLayer
+end
+
+gameui --> ui
+

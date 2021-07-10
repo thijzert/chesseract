@@ -1,0 +1,73 @@
+classDiagram
+
+	class PieceType{
+		<<enumeration>>
+		KING
+		QUEEN
+		BISHOP
+		KNIGHT
+		ROOK
+		PAWN
+	}
+
+	class Colour{
+		<<enumeration>>
+		BLACK
+		WHITE
+	}
+
+	class Position{
+		<<interface>>
+		+String()
+		+CellColour()
+	}
+
+	class Piece{
+		+PieceType
+		+Colour
+		+Position
+	}
+
+	PieceType <-- Piece
+	Colour <-- Piece
+	Position <-- Piece
+
+	class Board{
+		+Piece[] Pieces
+	}
+
+	Piece <-- Board
+
+	class Move {
+		+PieceType
+		+From
+		+To
+		+Time
+	}
+
+	PieceType <-- Move
+	Position <-- Move
+
+	class RuleSet {
+		+DefaultBoard() Board
+		+AllPositions() []Position
+
+		+CanMove(Board, Piece, Position) bool
+		+ApplyMove(Board, Move) Board
+	}
+
+	Board <-- RuleSet
+	Piece <-- RuleSet
+	Position <-- RuleSet
+	Move <-- RuleSet
+
+	class Match {
+		+RuleSet
+		+Board
+		+Moves[]
+	}
+
+	RuleSet <-- Match
+	Board <-- Match
+	Move <-- Match
+

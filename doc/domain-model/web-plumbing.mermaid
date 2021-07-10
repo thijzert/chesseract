@@ -1,0 +1,11 @@
+classDiagram
+
+class StorageBackend {
+	<<interface>>
+}
+
+class Server {
+	+StorageBackend
+}
+
+StorageBackend <-- Server
