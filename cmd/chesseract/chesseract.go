@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	chesseract "github.com/thijzert/chesseract/pkg"
+	"github.com/thijzert/chesseract/chesseract"
 )
 
 func main() {

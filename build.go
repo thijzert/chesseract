@@ -62,7 +62,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			runArgs := append([]string{"./chesseract"}, flag.Args()...)
+			runArgs := append([]string{"build/chesseract"}, flag.Args()...)
 			return passthru(ctx, runArgs...)
 		}
 	} else {
@@ -110,9 +110,9 @@ func compile(ctx context.Context, conf compileConfig) error {
 	}
 
 	// Build main executable
-	execOutput := "chesseract"
+	execOutput := "build/chesseract"
 	if runtime.GOOS == "windows" || conf.GOOS == "windows" {
-		execOutput = "chesseract.exe"
+		execOutput = "build/chesseract.exe"
 	}
 
 	gofiles, err := filepath.Glob("cmd/chesseract/*.go")
@@ -121,7 +121,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 	}
 	compileArgs := append([]string{
 		"build",
-		"-ldflags", "-X github.com/thijzert/chesseract/pkg.PackageVersion=" + conf.PackageVersion,
+		"-ldflags", "-X github.com/thijzert/chesseract/chesseract.PackageVersion=" + conf.PackageVersion,
 		"-o", execOutput,
 	}, gofiles...)
 
