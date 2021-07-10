@@ -1,0 +1,20 @@
+flowchart LR
+
+	Player["🧍<br/>Player"]:::umlActor
+	Player --- play_game
+	Player --- use_lobby
+
+	subgraph usecases [ ]
+		direction TB
+
+		play_game([play match])
+		use_lobby([set up match])
+
+		play_game -- "<<include>>" --> use_lobby
+	end
+
+	Bot["<<actor>><br/>Bot"]
+	Bot --- play_game
+
+
+	classDef umlActor fill:none,stroke:none;
