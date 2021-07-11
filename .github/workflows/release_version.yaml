@@ -48,43 +48,43 @@ jobs:
         prerelease: false
 
     - name: Upload Release Asset (1 of 4)
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/chesseract-linux-x64
-          asset_name: chesseract-linux-x64
-          asset_content_type: application/x-elf
+      id: upload-release-asset-linux
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/chesseract-linux-x64
+        asset_name: chesseract-linux-x64
+        asset_content_type: application/x-elf
     - name: Upload Release Asset (2 of 4)
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/chesseract-linux-rpi
-          asset_name: chesseract-linux-rpi
-          asset_content_type: application/x-elf
+      id: upload-release-asset-raspberrypi
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/chesseract-linux-rpi
+        asset_name: chesseract-linux-rpi
+        asset_content_type: application/x-elf
     - name: Upload Release Asset (3 of 4)
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/chesseract-darwin-x64
-          asset_name: chesseract-darwin-x64
-          asset_content_type: application/x-elf
+      id: upload-release-asset-mac
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/chesseract-darwin-x64
+        asset_name: chesseract-darwin-x64
+        asset_content_type: application/x-elf
     - name: Upload Release Asset (4 of 4)
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/chesseract-windows-x64.exe
-          asset_name: chesseract-windows-x64.exe
-          asset_content_type: application/x-msdownload
+      id: upload-release-asset-windows
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/chesseract-windows-x64.exe
+        asset_name: chesseract-windows-x64.exe
+        asset_content_type: application/x-msdownload
 
