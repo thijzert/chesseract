@@ -18,6 +18,8 @@ jobs:
         go-version: 1.16
 
     - name: Compile all artefacts
+      env:
+        GOARM: 7
       run: |
         go run build.go -version "${{ github.ref }}"
         go run build.go -quick -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=linux
@@ -25,7 +27,7 @@ jobs:
         go run build.go -quick -version "${{ github.ref }}" -GOARCH=arm64 -GOOS=linux
         mv build/chesseract build/chesseract-linux-rpi
         go run build.go -quick -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=darwin
-        mv build/chesseract build/chesseract-darwin-amd64
+        mv build/chesseract build/chesseract-darwin-x64
         go run build.go -quick -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=windows
         mv build/chesseract.exe build/chesseract-windows-x64.exe
 
