@@ -19,15 +19,15 @@ jobs:
 
     - name: Compile all artefacts
       run: |
-        - go run build.go -version "${{ github.ref }}"
-        - go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=linux
-        - mv build/chesseract build/chesseract-linux-x64
-        - go run build.go -quick -version "${{ github.ref }}" -goarch=arm64 -goos=linux
-        - mv build/chesseract build/chesseract-linux-rpi
-        - go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=darwin
-        - mv build/chesseract build/chesseract-darwin-amd64
-        - go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=windows
-        - mv build/chesseract.exe build/chesseract-windows-x64.exe
+        go run build.go -version "${{ github.ref }}"
+        go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=linux
+        mv build/chesseract build/chesseract-linux-x64
+        go run build.go -quick -version "${{ github.ref }}" -goarch=arm64 -goos=linux
+        mv build/chesseract build/chesseract-linux-rpi
+        go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=darwin
+        mv build/chesseract build/chesseract-darwin-amd64
+        go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=windows
+        mv build/chesseract.exe build/chesseract-windows-x64.exe
 
     - name: Run tests again, just to be sure
       run: go test -v ./...
