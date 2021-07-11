@@ -1,0 +1,90 @@
+name: Go
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Compile all artefacts
+      run: |
+        - go run build.go -version "${{ github.ref }}"
+        - go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=linux
+        - mv build/chesseract build/chesseract-linux-x64
+        - go run build.go -quick -version "${{ github.ref }}" -goarch=arm64 -goos=linux
+        - mv build/chesseract build/chesseract-linux-rpi
+        - go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=darwin
+        - mv build/chesseract build/chesseract-darwin-amd64
+        - go run build.go -quick -version "${{ github.ref }}" -goarch=amd64 -goos=windows
+        - mv build/chesseract.exe build/chesseract-windows-x64.exe
+
+    - name: Run tests again, just to be sure
+      run: go test -v ./...
+
+    - name: Calculate checksums
+      run: sha256sum build/*
+
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: Release version ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset (1 of 4)
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/chesseract-linux-x64
+          asset_name: chesseract-linux-x64
+          asset_content_type: application/x-elf
+    - name: Upload Release Asset (2 of 4)
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/chesseract-linux-rpi
+          asset_name: chesseract-linux-rpi
+          asset_content_type: application/x-elf
+    - name: Upload Release Asset (3 of 4)
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/chesseract-darwin-x64
+          asset_name: chesseract-darwin-x64
+          asset_content_type: application/x-elf
+    - name: Upload Release Asset (4 of 4)
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/chesseract-windows-x64.exe
+          asset_name: chesseract-windows-x64.exe
+          asset_content_type: application/x-msdownload
+
