@@ -8,41 +8,27 @@ end
 
 main --> chesseract
 main --> web-server
+main --> web-config
 main --> sqlbackend
 main --> renderer
 main --> gameui
 main --> gamestuff
 main --> win31
 
-subgraph chesseract
-	direction LR
-	Match
-	Board
-	Piece
-end
-
-subgraph gamestuff ["chesseract/game"]
-	direction LR
-	Player
-	Game
-end
-
-gamestuff --> chesseract
-
-
 subgraph backends["internal/storage/sql"]
 	sqlbackend[Backend]
 end
 
 subgraph plumbing ["internal/web-plumbing"]
-	direction LR
+	%% direction LR
 	web-server[Server]
+	web-config[Config]
 end
 
 plumbing --> web
 
 subgraph web ["web"]
-	direction LR
+	%% direction LR
 	HomeHandler
 	MatchHandler
 end
@@ -50,8 +36,24 @@ end
 web --> chesseract
 web --> gamestuff
 
+subgraph chesseract
+	%% direction LR
+	Match
+	Board
+	Piece
+end
+
+subgraph gamestuff ["chesseract/game"]
+	%% direction LR
+	Player
+	Game
+end
+
+gamestuff --> chesseract
+
+
 subgraph renderer ["internal/renderer"]
-	direction LR
+	%% direction LR
 	Model
 	AnimationManager
 end
@@ -59,26 +61,28 @@ end
 renderer --> Game
 
 subgraph ui ["internal/ui"]
-	direction LR
+	%% direction LR
 	Layer
 	EventTarget
 	Layout
 end
 
 subgraph win31 ["internal/ui/themes"]
-	direction LR
+	%% direction LR
 	Theme
 end
 
 Theme --> ui
 
 subgraph gameui ["internal/ui/gameui"]
-	direction LR
-	%% DebugLayer
-	OSDLayer
-	%% MenuLayer
+	%% direction LR
 	DialogLayer
+	%% MenuLayer
+	OSDLayer
+	%% DebugLayer
 end
 
-gameui --> ui
+OSDLayer --> ui
 
+gameui --> renderer
+gameui --> gamestuff
