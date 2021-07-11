@@ -42,7 +42,7 @@ jobs:
           git config --local user.email "github-actions@users.noreply.github.com"
           git config --local user.name "GitHub Actions [bot]"
           git add ".resources"
-          git commit -m "Recompile diagrams"
+          git commit -m "Recompile diagrams" || true
 
       - name: Push changes
         uses: ad-m/github-push-action@65392840bda2e774394d5cd38ca33e5918aec2d3
