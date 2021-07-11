@@ -19,6 +19,7 @@ classDiagram
 	class Position{
 		<<interface>>
 		+String()
+		+Equals(Position) bool
 		+CellColour()
 	}
 
@@ -34,6 +35,8 @@ classDiagram
 
 	class Board{
 		+Piece[] Pieces
+		+Colour Turn
+		+At(Position) (Piece, bool)
 	}
 
 	Piece <-- Board
@@ -49,6 +52,8 @@ classDiagram
 	Position <-- Move
 
 	class RuleSet {
+		<<interface>>
+
 		+DefaultBoard() Board
 		+AllPositions() []Position
 
@@ -71,3 +76,20 @@ classDiagram
 	Board <-- Match
 	Move <-- Match
 
+
+	class Boring2D {
+	}
+	class Chesseract {
+	}
+
+	RuleSet <|-- Boring2D
+	RuleSet <|-- Chesseract
+
+
+	class position2D {
+	}
+	class position4D {
+	}
+
+	Position <|-- position2D
+	Position <|-- position4D
