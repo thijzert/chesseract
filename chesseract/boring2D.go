@@ -62,6 +62,7 @@ func (Boring2D) DefaultBoard() Board {
 			{KING, BLACK, position2D{4, 7}},
 			{BISHOP, BLACK, position2D{5, 7}},
 			{KNIGHT, BLACK, position2D{6, 7}},
+			{ROOK, BLACK, position2D{7, 7}},
 		},
 		Turn: WHITE,
 	}
@@ -78,7 +79,8 @@ func (Boring2D) AllPositions() []Position {
 	return rv
 }
 
-// CanMove tests whether a piece can move to the specified new position on the board
+// CanMove tests whether a piece can move to the specified new position on the board.
+// Note: this only tests movement rules; the check check is performed elsewhere.
 func (Boring2D) CanMove(board Board, piece Piece, pos Position) bool {
 	var oldPos, newPos position2D
 	var ok bool
@@ -114,8 +116,6 @@ func (Boring2D) CanMove(board Board, piece Piece, pos Position) bool {
 		if dx*dx > 1 || dy*dy > 1 {
 			return false
 		}
-
-		// The check check is done elsewhere.
 
 		return true
 	} else if piece.PieceType == QUEEN {

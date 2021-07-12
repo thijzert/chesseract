@@ -79,6 +79,7 @@ type RuleSet interface {
 	AllPositions() []Position
 
 	// CanMove tests whether a piece can move to the specified new position on the board
+	// Note: this only tests movement rules; the check check is performed in ApplyMove.
 	CanMove(Board, Piece, Position) bool
 
 	// ApplyMove performs a move on the board, and returns the resulting board

@@ -17,5 +17,13 @@ func main() {
 
 func run() error {
 	fmt.Printf("Package version: %s.  Hello, world!\n", chesseract.PackageVersion)
+
+	rs := chesseract.Boring2D{}
+	match := chesseract.Match{
+		RuleSet: rs,
+		Board:   rs.DefaultBoard(),
+	}
+	match.DebugDump(os.Stdout)
+
 	return nil
 }
