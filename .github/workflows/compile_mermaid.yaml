@@ -6,7 +6,7 @@ on:
       - '**/*.mermaid'
 
 jobs:
-  build:
+  render:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,6 +32,7 @@ jobs:
           HIDE_CODEBLOCKS: 1
           ABSOLUTE_IMAGE_LINKS: 1
           OUTPUT_FILE_TYPE: "svg"
+          MMDC_EXTRA_ARGS: "-c .resources/mermaid-config.json"
 
       - name: show changes
         run: |
