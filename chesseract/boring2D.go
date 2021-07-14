@@ -102,10 +102,14 @@ func (Boring2D) CanMove(board Board, piece Piece, pos Position) bool {
 		return false
 	}
 
+	capture := false
+
 	// You can't capture your own pieces
 	if op, ok := board.At(newPos); ok {
 		if op.Colour == piece.Colour {
 			return false
+		} else {
+			capture = true
 		}
 	}
 
@@ -139,7 +143,27 @@ func (Boring2D) CanMove(board Board, piece Piece, pos Position) bool {
 			return false
 		}
 	} else if piece.PieceType == PAWN {
-		panic("not implemented")
+		// Check direction
+		if (piece.Colour == WHITE && dy <= 0) || (piece.Colour == BLACK && dy >= 0) {
+			return false
+		}
+
+		if capture {
+			return dy*dy == 1 && dx*dx == 1
+		} else {
+			if dx != 0 {
+				return false
+			} else if dy*dy == 1 {
+				return true
+			} else if dy*dy == 4 {
+				if (piece.Colour == WHITE && oldPos[1] != 1) || (piece.Colour == BLACK && oldPos[1] != 6) {
+					return false
+				}
+				// Check trajectory below
+			} else {
+				return false
+			}
+		}
 	} else {
 		// Unknown piece
 		return false

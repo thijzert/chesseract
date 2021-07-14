@@ -5,11 +5,11 @@ import (
 	"io"
 )
 
-func (match Match) DebugDump(w io.Writer) {
+func (match Match) DebugDump(w io.Writer, highlight []Position) {
 	if _, ok := match.RuleSet.(Boring2D); ok {
-		match.dumpBoring2DBoard(w)
+		match.dumpBoring2DBoard(w, highlight)
 	} else {
-		match.dumpUnknownBoard(w)
+		match.dumpUnknownBoard(w, highlight)
 	}
 
 	for i, m := range match.Moves {
@@ -21,11 +21,24 @@ func (match Match) DebugDump(w io.Writer) {
 	}
 }
 
-func (match Match) dumpCell(w io.Writer, p Position) {
-	if p.CellColour() == BLACK {
-		w.Write([]byte("\x1b[48;5;178m\x1b[38;5;0m"))
+func (match Match) dumpCell(w io.Writer, p Position, highlight []Position) {
+	hl := false
+	for _, q := range highlight {
+		hl = hl || p.Equals(q)
+	}
+
+	if hl {
+		if p.CellColour() == BLACK {
+			w.Write([]byte("\x1b[48;5;33m\x1b[38;5;0m"))
+		} else {
+			w.Write([]byte("\x1b[48;5;159m\x1b[38;5;0m"))
+		}
 	} else {
-		w.Write([]byte("\x1b[48;5;229m\x1b[38;5;0m"))
+		if p.CellColour() == BLACK {
+			w.Write([]byte("\x1b[48;5;178m\x1b[38;5;0m"))
+		} else {
+			w.Write([]byte("\x1b[48;5;229m\x1b[38;5;0m"))
+		}
 	}
 
 	if pc, ok := match.Board.At(p); ok {
@@ -46,7 +59,7 @@ func (match Match) dumpCell(w io.Writer, p Position) {
 	w.Write([]byte("\x1b[0m"))
 }
 
-func (match Match) dumpBoring2DBoard(w io.Writer) {
+func (match Match) dumpBoring2DBoard(w io.Writer, highlight []Position) {
 	var x, y int
 
 	fmt.Fprintf(w, "   ")
@@ -57,7 +70,7 @@ func (match Match) dumpBoring2DBoard(w io.Writer) {
 	for y = 7; y >= 0; y-- {
 		fmt.Fprintf(w, "%d |", y+1)
 		for x = 0; x < 8; x++ {
-			match.dumpCell(w, position2D{x, y})
+			match.dumpCell(w, position2D{x, y}, highlight)
 		}
 		fmt.Fprintf(w, "| %d\n", y+1)
 	}
@@ -68,7 +81,7 @@ func (match Match) dumpBoring2DBoard(w io.Writer) {
 	fmt.Fprintf(w, "\n")
 }
 
-func (match Match) dumpUnknownBoard(w io.Writer) {
+func (match Match) dumpUnknownBoard(w io.Writer, highlight []Position) {
 	for _, p := range match.RuleSet.AllPositions() {
 		if pc, ok := match.Board.At(p); ok {
 			fmt.Fprintf(w, "Position %s has %s %s\n", p, pc.Colour, pc.PieceType)

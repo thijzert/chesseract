@@ -23,7 +23,7 @@ func run() error {
 		RuleSet: rs,
 		Board:   rs.DefaultBoard(),
 	}
-	match.DebugDump(os.Stdout)
+	match.DebugDump(os.Stdout, nil)
 
 	return nil
 }
