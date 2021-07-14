@@ -56,6 +56,7 @@ classDiagram
 
 		+DefaultBoard() Board
 		+AllPositions() []Position
+		+ParsePosition(string) (Position, error)
 
 		+CanMove(Board, Piece, Position) bool
 		+ApplyMove(Board, Move) Board
@@ -84,8 +85,6 @@ classDiagram
 
 	RuleSet <|-- Boring2D
 	RuleSet <|-- Chesseract
-
-
 
 
 	class position2D {

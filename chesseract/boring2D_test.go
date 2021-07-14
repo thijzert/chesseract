@@ -2,7 +2,9 @@ package chesseract
 
 import (
 	"bytes"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestEquality(t *testing.T) {
@@ -41,6 +43,35 @@ func logMatch(t *testing.T, m Match, highlight []Position) {
 	var b bytes.Buffer
 	m.DebugDump(&b, highlight)
 	t.Logf("\n%s", &b)
+}
+
+func TestPositionParser(t *testing.T) {
+	rs := Boring2D{}
+	invalidValues := []string{
+		"",
+		"a1a1",
+		"e9",
+		" c",
+	}
+	for _, s := range invalidValues {
+		p, err := rs.ParsePosition(s)
+		if err == nil {
+			t.Logf("String '%s' decodes into '%s' - not good", s, p)
+			t.Fail()
+		}
+	}
+
+	// Test every valid value
+	for _, p := range rs.AllPositions() {
+		q, err := rs.ParsePosition(p.String())
+		if err != nil {
+			t.Logf("Error parsing position '%s': %v", p, err)
+			t.Fail()
+		} else if !p.Equals(q) {
+			t.Logf("Position '%s' turns into '%s'", p, q)
+			t.Fail()
+		}
+	}
 }
 
 func TestBoring2DDefaultBoard(t *testing.T) {
@@ -86,7 +117,9 @@ func TestBoring2DDefaultBoard(t *testing.T) {
 
 func TestVeryInvalidMoves(t *testing.T) {
 	rs := Boring2D{}
-	board := Board{Pieces: []Piece{}}
+	board := Board{Pieces: []Piece{
+		{KING, WHITE, invalidPosition{}},
+	}}
 
 	type testCase struct {
 		PieceType PieceType
@@ -100,6 +133,8 @@ func TestVeryInvalidMoves(t *testing.T) {
 		{19, position2D{3, 3}, position2D{5, 3}},
 		{BISHOP, position2D{3, 3}, position4D{3, 3, 3, 3}},
 		{BISHOP, position4D{3, 3, 3, 3}, position2D{3, 3}},
+		{BISHOP, invalidPosition{}, position2D{3, 3}},
+		{BISHOP, position2D{3, 3}, invalidPosition{}},
 	}
 
 	for _, tc := range suite {
@@ -112,7 +147,7 @@ func TestVeryInvalidMoves(t *testing.T) {
 			t.Logf("%s at %s shouldn't move to %s", tc.PieceType, tc.From, tc.To)
 			t.Fail()
 		} else {
-			t.Logf("%s at %s cannot move to %s, which is as it should be", tc.PieceType, tc.From, tc.To)
+			t.Logf("%s at %s (%s) cannot move to %s (%s), which is as it should be", tc.PieceType, tc.From, tc.From.CellColour(), tc.To, tc.To.CellColour())
 		}
 	}
 }
@@ -235,5 +270,69 @@ func TestMovementRules(t *testing.T) {
 				t.Fail()
 			}
 		}
+	}
+}
+
+func Test2DMatch(t *testing.T) {
+	type moov struct {
+		From, To string
+	}
+	moves := []moov{
+		{"e2", "e4"}, {"c7", "c5"},
+		{"g1", "f3"}, {"d7", "d6"},
+		{"d2", "d4"}, {"c5", "d4"},
+		{"f3", "d4"}, {"g8", "f6"},
+		{"b1", "c3"}, {"a7", "a6"},
+		{"c1", "e3"}, {"e7", "e6"},
+		{"g2", "g4"}, {"e6", "e5"},
+		{"d4", "f5"}, {"g7", "g6"},
+		{"g4", "g5"}, {"g6", "f5"},
+		{"e4", "f5"}, {"d6", "d5"},
+		{"d1", "f3"}, {"d5", "d4"},
+	}
+
+	rs := Boring2D{}
+	match := Match{
+		RuleSet: rs,
+		Board:   rs.DefaultBoard(),
+	}
+	for _, m := range moves {
+		from, err := rs.ParsePosition(m.From)
+		if err != nil {
+			t.Logf("error parsing '%s': %v", m.From, err)
+			t.Fail()
+			break
+		}
+		piece, _ := match.Board.At(from)
+		to, err := rs.ParsePosition(m.To)
+		if err != nil {
+			t.Logf("error parsing '%s': %v", m.To, err)
+			t.Fail()
+			break
+		}
+
+		move := Move{piece.PieceType, from, to, time.Duration(int64(rand.Intn(90000))) * time.Millisecond}
+		newBoard, err := rs.ApplyMove(match.Board, move)
+		if err != nil {
+			t.Logf("applying move '%s'-'%s': %v", m.From, m.To, err)
+			t.Fail()
+			break
+		}
+
+		match.Moves = append(match.Moves, move)
+		match.Board = newBoard
+	}
+
+	logMatch(t, match, nil)
+
+	_, err := rs.ApplyMove(match.Board, Move{QUEEN, position2D{0, 3}, position2D{3, 3}, 0})
+	if err == nil {
+		t.Logf("This is not the Queen you were looking for")
+		t.Fail()
+	}
+	_, err = rs.ApplyMove(match.Board, Move{QUEEN, position2D{5, 2}, position2D{3, 3}, 0})
+	if err == nil {
+		t.Logf("The Queen does not horse around")
+		t.Fail()
 	}
 }

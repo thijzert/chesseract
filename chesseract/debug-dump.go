@@ -6,18 +6,18 @@ import (
 )
 
 func (match Match) DebugDump(w io.Writer, highlight []Position) {
-	if _, ok := match.RuleSet.(Boring2D); ok {
-		match.dumpBoring2DBoard(w, highlight)
-	} else {
-		match.dumpUnknownBoard(w, highlight)
-	}
-
 	for i, m := range match.Moves {
 		if i%2 == 0 {
 			fmt.Fprintf(w, " %3d: %s\n", 1+i/2, m)
 		} else {
 			fmt.Fprintf(w, "      %s\n", m)
 		}
+	}
+
+	if _, ok := match.RuleSet.(Boring2D); ok {
+		match.dumpBoring2DBoard(w, highlight)
+	} else {
+		match.dumpUnknownBoard(w, highlight)
 	}
 }
 

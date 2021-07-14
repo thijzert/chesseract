@@ -79,6 +79,26 @@ func (Boring2D) AllPositions() []Position {
 	return rv
 }
 
+// ParsePosition converts a string representation into a Position of the correct type
+func (Boring2D) ParsePosition(s string) (Position, error) {
+	if len(s) != 2 {
+		return invalidPosition{}, errInvalidFormat
+	}
+
+	rv := position2D{}
+	for i, r := range s {
+		if i%2 == 0 {
+			rv[i] = int(r - 'a')
+		} else {
+			rv[i] = int(r - '1')
+		}
+		if rv[i] < 0 || rv[i] >= 8 {
+			return invalidPosition{}, errInvalidFormat
+		}
+	}
+	return rv, nil
+}
+
 // CanMove tests whether a piece can move to the specified new position on the board.
 // Note: this only tests movement rules; the check check is performed elsewhere.
 func (Boring2D) CanMove(board Board, piece Piece, pos Position) bool {
@@ -202,6 +222,25 @@ func normalise2d(dx, dy int) (vx, vy, r int) {
 }
 
 // ApplyMove performs a move on the board, and returns the resulting board
-func (Boring2D) ApplyMove(Board, Move) (Board, error) {
-	return Board{}, fmt.Errorf("not implemented")
+func (rs Boring2D) ApplyMove(board Board, move Move) (Board, error) {
+	piece, ok := board.At(move.From)
+	if !ok {
+		return Board{}, errIllegalMove
+	}
+
+	if !rs.CanMove(board, piece, move.To) {
+		return Board{}, errIllegalMove
+	}
+
+	newBoard := board.movePiece(move)
+
+	// TODO: check if this results in the player being in check
+
+	if newBoard.Turn == BLACK {
+		newBoard.Turn = WHITE
+	} else {
+		newBoard.Turn = BLACK
+	}
+
+	return newBoard, nil
 }
