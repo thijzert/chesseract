@@ -7,9 +7,9 @@ import (
 
 func (match Match) DebugDump(w io.Writer) {
 	if _, ok := match.RuleSet.(Boring2D); ok {
-		dumpBoring2DBoard(w, match.Board)
+		match.dumpBoring2DBoard(w)
 	} else {
-		dumpUnknownBoard(w, match)
+		match.dumpUnknownBoard(w)
 	}
 
 	for i, m := range match.Moves {
@@ -21,14 +21,14 @@ func (match Match) DebugDump(w io.Writer) {
 	}
 }
 
-func dumpCell(w io.Writer, p Position, board Board) {
+func (match Match) dumpCell(w io.Writer, p Position) {
 	if p.CellColour() == BLACK {
 		w.Write([]byte("\x1b[48;5;178m\x1b[38;5;0m"))
 	} else {
 		w.Write([]byte("\x1b[48;5;229m\x1b[38;5;0m"))
 	}
 
-	if pc, ok := board.At(p); ok {
+	if pc, ok := match.Board.At(p); ok {
 		s := pc.PieceType.String()
 		var r rune
 		for _, rr := range s {
@@ -46,7 +46,7 @@ func dumpCell(w io.Writer, p Position, board Board) {
 	w.Write([]byte("\x1b[0m"))
 }
 
-func dumpBoring2DBoard(w io.Writer, board Board) {
+func (match Match) dumpBoring2DBoard(w io.Writer) {
 	var x, y int
 
 	fmt.Fprintf(w, "   ")
@@ -57,7 +57,7 @@ func dumpBoring2DBoard(w io.Writer, board Board) {
 	for y = 7; y >= 0; y-- {
 		fmt.Fprintf(w, "%d |", y+1)
 		for x = 0; x < 8; x++ {
-			dumpCell(w, position2D{x, y}, board)
+			match.dumpCell(w, position2D{x, y})
 		}
 		fmt.Fprintf(w, "| %d\n", y+1)
 	}
@@ -68,7 +68,7 @@ func dumpBoring2DBoard(w io.Writer, board Board) {
 	fmt.Fprintf(w, "\n")
 }
 
-func dumpUnknownBoard(w io.Writer, match Match) {
+func (match Match) dumpUnknownBoard(w io.Writer) {
 	for _, p := range match.RuleSet.AllPositions() {
 		if pc, ok := match.Board.At(p); ok {
 			fmt.Fprintf(w, "Position %s has %s %s\n", p, pc.Colour, pc.PieceType)
