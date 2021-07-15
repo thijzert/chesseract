@@ -1,24 +1,35 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"net"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/thijzert/chesseract/chesseract"
+	plumbing "github.com/thijzert/chesseract/internal/web-plumbing"
 )
 
 func main() {
-	err := run()
+	fmt.Printf("Chesseract version: %s\n", chesseract.PackageVersion)
+
+	var err error = fmt.Errorf("invalid command")
+	if len(os.Args) < 2 {
+		err = consoleGame()
+	} else if os.Args[1] == "server" {
+		err = apiServer()
+	}
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	fmt.Printf("Package version: %s.  Hello, world!\n", chesseract.PackageVersion)
-
+func consoleGame() error {
 	rs := chesseract.Boring2D{}
 	match := chesseract.Match{
 		RuleSet:   rs,
@@ -82,4 +93,29 @@ func run() error {
 		match.Moves = append(match.Moves, move)
 		match.Board = newBoard
 	}
+}
+
+func apiServer() error {
+	log.Printf("Starting server...")
+
+	listenPort := "localhost:36819"
+
+	conf := plumbing.ServerConfig{
+		Context: context.Background(),
+	}
+	s, err := plumbing.New(conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ln, err := net.Listen("tcp", listenPort)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Listening on %s", listenPort)
+
+	var srv http.Server
+	srv.Handler = s
+	return srv.Serve(ln)
 }
