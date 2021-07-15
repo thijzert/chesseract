@@ -32,7 +32,7 @@ jobs:
         mv build/chesseract.exe build/chesseract-windows-x64.exe
 
     - name: Run tests again, just to be sure
-      run: go test -v ./...
+      run: go test ./...
 
     - name: Calculate checksums
       run: sha256sum build/*

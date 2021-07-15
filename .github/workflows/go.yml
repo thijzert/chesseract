@@ -33,7 +33,7 @@ jobs:
       run: go run build.go -version "${{steps.tagger.outputs.tag}}"
 
     - name: Test
-      run: go test -v -race -cover -coverprofile=cover.out ./...
+      run: go test -race -cover -coverprofile=cover.out ./...
 
     - name: Generate coverage report
       run: go tool cover -html=cover.out -o code-coverage.html
