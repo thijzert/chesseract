@@ -234,7 +234,10 @@ func (rs Boring2D) ApplyMove(board Board, move Move) (Board, error) {
 
 	newBoard := board.movePiece(move)
 
-	// TODO: check if this results in the player being in check
+	// TODO: pawn promotion
+	// TODO: castling
+
+	// TODO: check if this results in the player being in check. Reject with errIllegalMove if it does.
 
 	if newBoard.Turn == BLACK {
 		newBoard.Turn = WHITE

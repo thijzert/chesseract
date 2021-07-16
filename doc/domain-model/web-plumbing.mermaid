@@ -1,12 +1,77 @@
 classDiagram
 
-class StorageBackend {
-	<<interface>>
-}
+	class Server {
+		+StorageBackend
+		+ServerHTTP(w, r)
+	}
 
-class Server {
-	+StorageBackend
-	+ServerHTTP(w, r)
-}
+	storage_Backend <-- Server
 
-StorageBackend <-- Server
+	class storage_Backend {
+		<<interface>>
+
+		Initialise() error
+
+		StartTransaction() error
+		CommitTransaction() error
+		RollBackTransaction() error
+
+		NewSession() (Session, error)
+		GetSession(SessionID) (Session, error)
+		StoreSession(SessionID, Session) error
+
+		NewPlayer() (Player, error)
+		GetPlayer(PlayerID) (Player, error)
+		StorePlayer(PlayerID, Player) error
+
+		NewMatch() (Match, error)
+		GetMatch(MatchID) (Match, error)
+		StoreMatch(MatchID, Match) error
+	}
+
+	class storage_Dory {
+		sync.RWMutex
+		aBunchOfMaps []map
+	}
+	class storage_sql_Backend {
+		connection *sql.Db
+	}
+
+	storage_Backend <|-- storage_Dory
+	storage_Backend <|-- storage_sql_Backend
+
+
+	class Handler {
+		<<interface>>
+	}
+
+	class web_HomeHandler {
+	}
+	class web_MoveHandler {
+	}
+
+	Handler <|-- web_HomeHandler
+	Handler <|-- web_MoveHandler
+
+	web_HomeHandler <-- Server
+	web_MoveHandler <-- Server
+
+
+	class Provider {
+		<<interface>>
+	}
+
+	Provider <-- Handler
+
+	class webProvider {
+	}
+	class teststubProvider {
+	}
+
+	Provider <|-- webProvider
+	Provider <|-- teststubProvider
+
+	storage_Backend <-- webProvider
+
+	webProvider <-- Server
+
