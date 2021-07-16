@@ -311,7 +311,12 @@ func Test2DMatch(t *testing.T) {
 			break
 		}
 
-		move := Move{piece.PieceType, from, to, time.Duration(int64(rand.Intn(90000))) * time.Millisecond}
+		dur := int64(rand.Intn(180000)) - 90000
+		if dur < 0 {
+			dur = 0
+		}
+
+		move := Move{piece.PieceType, from, to, time.Duration(dur) * time.Millisecond}
 		newBoard, err := rs.ApplyMove(match.Board, move)
 		if err != nil {
 			t.Logf("applying move '%s'-'%s': %v", m.From, m.To, err)
