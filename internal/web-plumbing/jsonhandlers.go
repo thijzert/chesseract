@@ -30,14 +30,8 @@ func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state := h.Server.getState()
-	newState, resp, err := h.Handler.HandleRequest(state, req)
-	if err != nil {
-		h.Error(w, r, err)
-		return
-	}
-
-	err = h.Server.setState(newState)
+	provider := h.Server.getProvider(r)
+	resp, err := h.Handler.HandleRequest(provider, req)
 	if err != nil {
 		h.Error(w, r, err)
 		return

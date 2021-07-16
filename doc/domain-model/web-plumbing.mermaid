@@ -12,9 +12,7 @@ classDiagram
 
 		Initialise() error
 
-		StartTransaction() error
-		CommitTransaction() error
-		RollBackTransaction() error
+		Transaction(func() error)
 
 		NewSession() (Session, error)
 		GetSession(SessionID) (Session, error)

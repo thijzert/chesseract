@@ -48,17 +48,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-func (s *Server) getState() web.State {
-	rv := web.State{}
+func (s *Server) getProvider(r *http.Request) web.Provider {
+	rv := webProvider{
+		Server: s,
+	}
 
-	// TODO: get data
+	// TODO: set up provider: parse headers, check authenticators, etc.
 
 	return rv
 }
 
-// setState writes back any modified fields to the global state
-func (s *Server) setState(state web.State) error {
-	// TODO: writeback
-
-	return nil
+// The webProvider is a web.Provider that uses the Server's data backend
+type webProvider struct {
+	Server *Server
 }

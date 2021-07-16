@@ -13,8 +13,8 @@ type errorResponse struct {
 
 func (errorResponse) FlaggedAsResponse() {}
 
-func withError(s State, e error) (State, Response, error) {
-	return s, errorResponse{e}, e
+func withError(e error) (Response, error) {
+	return errorResponse{e}, e
 }
 
 type errWrongRequestType struct{}

@@ -4,8 +4,10 @@ import (
 	"net/http"
 )
 
-// The State struct represents the current state of the world
-type State struct {
+// The Provider is the Handlers' interface to the data backend. It is assumed
+// that the Provider has performed all necessary context wrangling and cookie
+// consuming
+type Provider interface {
 }
 
 var (
@@ -38,5 +40,5 @@ type Handler interface {
 	// are the current state of the world, and a handler-specific request type,
 	// and the output is the new state of the world (which may or may not be the
 	// same), a handler-specific response type, and/or an error.
-	HandleRequest(State, Request) (State, Response, error)
+	HandleRequest(Provider, Request) (Response, error)
 }
