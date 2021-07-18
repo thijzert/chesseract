@@ -5,12 +5,16 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/thijzert/chesseract/internal/storage"
 	"github.com/thijzert/chesseract/web"
 )
 
 // A ServerConfig combines common options for running a HTTP frontend
 type ServerConfig struct {
 	Context context.Context
+
+	// A descriptor that initialises the storage backend
+	StorageDSN string
 }
 
 // A Server wraps a HTTP frontend
@@ -19,6 +23,7 @@ type Server struct {
 	config          ServerConfig
 	mux             *http.ServeMux
 	parsedTemplates map[string]*template.Template
+	storage         storage.Backend
 }
 
 // New instantiates a new server instance
@@ -27,6 +32,18 @@ func New(config ServerConfig) (*Server, error) {
 		context: config.Context,
 		config:  config,
 		mux:     http.NewServeMux(),
+	}
+
+	var err error
+	s.storage, err = storage.GetBackend(config.StorageDSN)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.storage.Initialise()
+	if err != nil {
+		s.storage.Close()
+		return nil, err
 	}
 
 	s.mux.Handle("/", s.HTMLFunc(web.HomeHandler, "full/home"))
@@ -40,7 +57,16 @@ func New(config ServerConfig) (*Server, error) {
 
 // Close frees any held resources
 func (s *Server) Close() error {
-	// TODO: actually close some resources
+	// Make sure we clean up everything, even if we encounter errors along the way
+	allErrors := []error{}
+
+	allErrors = append(allErrors, s.storage.Close())
+
+	for _, err := range allErrors {
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

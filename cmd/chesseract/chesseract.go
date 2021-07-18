@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -96,12 +97,23 @@ func consoleGame() error {
 }
 
 func apiServer() error {
+	var listenPort string
+	var storageBackend string
+
+	fs := flag.NewFlagSet(os.Args[0]+" server", flag.ContinueOnError)
+	fs.StringVar(&listenPort, "listen", "localhost:36819", "IP and port to listen on")
+	fs.StringVar(&storageBackend, "storage", "dory:", "DSN for storage backend")
+
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		return err
+	}
+
 	log.Printf("Starting server...")
 
-	listenPort := "localhost:36819"
-
 	conf := plumbing.ServerConfig{
-		Context: context.Background(),
+		Context:    context.Background(),
+		StorageDSN: storageBackend,
 	}
 	s, err := plumbing.New(conf)
 	if err != nil {
