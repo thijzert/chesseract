@@ -3,8 +3,7 @@ package storage
 import "testing"
 
 func TestInitialise(t *testing.T) {
-	var b Backend
-	b = &Dory{}
+	var b Backend = &Dory{}
 
 	err := b.Initialise()
 
