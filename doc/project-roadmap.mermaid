@@ -1,0 +1,24 @@
+gantt
+
+	title Project roadmap
+	axisFormat %m-%d
+
+	section Core
+		Debug renderer       :done, c1, 2021-07-10, 3d
+		Console game         :done, c2, 2021-07-11, 4d
+		Networking           :active, c3, after c2, 6d
+		3D viewport          :c4, after c3 a2, 6d
+		GUI                  :c5, after c4, 10d
+		Federation           :c6, after c5, 10d
+
+	section Rulesets
+		Classic chess        :active, r1, 2021-07-11, 12d
+		Chesseract           :r2, after r1, 12d
+
+	section Assets
+		3D modeling          :a1, after c3, 2d
+		Texturing            :a2, after a1, 2d
+		Procedural models    :a3, after a2, 5d
+		UI theme             :a4, after a3, 6d
+		Environment          :a5, after a4, 2d
+		Sound effects        :a6, after a5, 3d
