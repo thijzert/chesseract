@@ -3,8 +3,8 @@ package chesseract
 import "fmt"
 
 const (
-	BLACK Colour = 0
-	WHITE Colour = 1
+	BLACK Colour = 1
+	WHITE Colour = 2
 )
 
 func (c Colour) String() string {

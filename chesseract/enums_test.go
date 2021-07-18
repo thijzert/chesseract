@@ -6,9 +6,9 @@ import (
 )
 
 func TestColourStringer(t *testing.T) {
-	exp := " black white 0x02"
+	exp := " black white 0x03"
 	rv := ""
-	for i := uint8(0); i < 3; i++ {
+	for i := uint8(1); i < 4; i++ {
 		rv += fmt.Sprintf(" %s", Colour(i))
 	}
 
