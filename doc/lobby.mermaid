@@ -1,0 +1,29 @@
+sequenceDiagram
+
+	autonumber
+
+	Alice ->> Server: Hi, I'm online. Is anyone else?
+	Server ->> Alice: Hi, Alice! No, it's just you.
+
+	Bob ->> Server: Hi, I'm online. Is anyone else?
+	Server ->> Bob: Hi, Bob! Sure, Alice is online too!
+	activate Server
+		Bob ->>+ Server: I'd like to play a game against Alice.
+
+		Server ->> Alice: Bob asks if you want to play a game.
+		Alice ->> Server: Sure, I'm up for that.
+
+		loop ad nauseam
+
+			Alice ->> Server: batman to Q-10
+			Server ->> Bob: Alice moves her batman to Q-10
+
+			Bob ->> Server: Picard to DS-9
+			Server ->> Alice: Bob moves his Picard to DS-9
+
+		end
+
+		Server ->> Alice: That's all, folks.
+		Server ->> Bob: That's all, folks.
+
+	deactivate Server
