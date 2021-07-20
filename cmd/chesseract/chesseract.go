@@ -17,20 +17,48 @@ import (
 func main() {
 	fmt.Printf("Chesseract version: %s\n", chesseract.PackageVersion)
 
-	var err error = fmt.Errorf("invalid command")
-	if len(os.Args) < 2 {
-		err = consoleGame()
-	} else if os.Args[1] == "server" {
-		err = apiServer()
+	var configLocation string
+
+	globalSettings := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	globalSettings.StringVar(&configLocation, "f", "~/.config/chesseract/chesseract.json", "Location of configuration file")
+	er := globalSettings.Parse(os.Args[1:])
+	if er != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", er)
+		os.Exit(1)
 	}
+
+	conf, er := loadConfig(configLocation)
+	if er != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", er)
+		os.Exit(1)
+	}
+
+	args := globalSettings.Args()
+	command := ""
+	if len(args) > 0 {
+		command = args[0]
+		args = args[1:]
+	}
+
+	var err error = fmt.Errorf("invalid command")
+	if command == "" {
+		err = consoleGame(&conf, args)
+	} else if command == "server" {
+		err = apiServer(&conf, args)
+	}
+
+	er = saveConfig(conf, configLocation)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
+		if er != nil {
+			fmt.Fprintf(os.Stderr, "error saving config: %v\n", er)
+		}
 		os.Exit(1)
 	}
 }
 
-func consoleGame() error {
+func consoleGame(conf *Config, args []string) error {
 	rs := chesseract.Boring2D{}
 	match := chesseract.Match{
 		RuleSet:   rs,
@@ -96,7 +124,7 @@ func consoleGame() error {
 	}
 }
 
-func apiServer() error {
+func apiServer(conf *Config, args []string) error {
 	var listenPort string
 	var storageBackend string
 
@@ -104,18 +132,18 @@ func apiServer() error {
 	fs.StringVar(&listenPort, "listen", "localhost:36819", "IP and port to listen on")
 	fs.StringVar(&storageBackend, "storage", "dory:", "DSN for storage backend")
 
-	err := fs.Parse(os.Args[2:])
+	err := fs.Parse(args)
 	if err != nil {
 		return err
 	}
 
 	log.Printf("Starting server...")
 
-	conf := plumbing.ServerConfig{
+	serverConfig := plumbing.ServerConfig{
 		Context:    context.Background(),
 		StorageDSN: storageBackend,
 	}
-	s, err := plumbing.New(conf)
+	s, err := plumbing.New(serverConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
