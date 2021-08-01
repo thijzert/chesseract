@@ -57,7 +57,14 @@ func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	provider := h.Server.getProvider(r)
+	provider, sessionID := h.Server.getProvider(r)
+	if _, ok := h.Handler.(sessionlessHandler); !ok {
+		if sessionID.IsEmpty() {
+			h.Error(w, r, errNoSession)
+			return
+		}
+	}
+
 	resp, err := h.Handler.HandleRequest(provider, req)
 	if err != nil {
 		h.Error(w, r, err)

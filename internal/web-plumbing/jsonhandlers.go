@@ -3,6 +3,7 @@ package plumbing
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,18 @@ import (
 	weberrors "github.com/thijzert/chesseract/internal/web-plumbing/errors"
 	"github.com/thijzert/chesseract/web"
 )
+
+type sessionlessHandler interface {
+	ThisHandlerDoesNotRequireSessions()
+}
+
+var errNoSession error
+
+func init() {
+	errNoSession = errors.New("no session")
+	errNoSession = weberrors.WithMessage(errNoSession, "Authentication required", "No valid session token was detected.")
+	errNoSession = weberrors.WithStatus(errNoSession, 401)
+}
 
 type jsonHandler struct {
 	Server  *Server
@@ -31,7 +44,13 @@ func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	provider := h.Server.getProvider(r)
+	provider, sessionID := h.Server.getProvider(r)
+	if _, ok := h.Handler.(sessionlessHandler); !ok {
+		if sessionID.IsEmpty() {
+			h.Error(w, r, errNoSession)
+			return
+		}
+	}
 	resp, err := h.Handler.HandleRequest(provider, req)
 	if err != nil {
 		h.Error(w, r, err)
@@ -58,7 +77,10 @@ func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, &b)
 }
 
-func (jsonHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
+func (h jsonHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
+	if h.Server.errorLog != nil {
+		h.Server.errorLog.Printf("%v", err)
+	}
 
 	w.Header()["Content-Type"] = []string{"application/json"}
 	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}

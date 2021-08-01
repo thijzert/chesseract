@@ -8,13 +8,19 @@ import (
 )
 
 func init() {
-	RegisterBackend("dory", func(string) (Backend, error) {
-		return &Dory{}, nil
+	RegisterBackend("dory", func(params string) (Backend, error) {
+		rv := &Dory{
+			params: params,
+		}
+
+		return rv, nil
 	})
 }
 
 // The Dory storage backend implements a storage backend that forgets everything as soon as the program stops.
 type Dory struct {
+	params string
+
 	mu sync.RWMutex
 
 	// sessions stores all sessions
@@ -34,11 +40,25 @@ func (d *Dory) String() string {
 func (d *Dory) Initialise() error {
 	d.mu.Lock()
 	// Just keep swimming
-	defer d.mu.Unlock()
 
 	d.sessions = make(map[SessionID]Session)
 	d.players = make(map[PlayerID]game.Player)
 	d.games = make(map[GameID]game.Game)
+
+	d.mu.Unlock()
+
+	if d.params == "northwind" {
+		// Fill the database with some default values
+		id, pl, _ := d.NewPlayer()
+		pl.Name = "alice"
+		pl.Gender = game.FEMALE
+		d.StorePlayer(id, pl)
+
+		id, pl, _ = d.NewPlayer()
+		pl.Name = "bob"
+		pl.Gender = game.MALE
+		d.StorePlayer(id, pl)
+	}
 
 	return nil
 }
@@ -128,6 +148,19 @@ func (d *Dory) StorePlayer(id PlayerID, player game.Player) error {
 	d.players[id] = player
 
 	return nil
+}
+
+func (d *Dory) LookupPlayer(name string) (PlayerID, bool, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	for id, player := range d.players {
+		if player.Name == name && player.Realm == "" {
+			return id, true, nil
+		}
+	}
+
+	return PlayerID{}, false, nil
 }
 
 // NewGame creates a new game

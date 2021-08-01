@@ -41,9 +41,11 @@ func main() {
 
 	var err error = fmt.Errorf("invalid command")
 	if command == "" {
-		err = consoleGame(&conf, args)
+		err = consoleLocalMultiplayer(&conf, args)
 	} else if command == "server" {
 		err = apiServer(&conf, args)
+	} else if command == "client" {
+		err = consoleGame(&conf, args)
 	}
 
 	er = saveConfig(conf, configLocation)
@@ -58,12 +60,14 @@ func main() {
 }
 
 func apiServer(conf *Config, args []string) error {
+	logVerbose := false
 	var listenPort string
 	var storageBackend string
 
 	fs := flag.NewFlagSet(os.Args[0]+" server", flag.ContinueOnError)
 	fs.StringVar(&listenPort, "listen", "localhost:36819", "IP and port to listen on")
 	fs.StringVar(&storageBackend, "storage", "dory:", "DSN for storage backend")
+	fs.BoolVar(&logVerbose, "v", false, "Verbosely log all errors sent to clients")
 
 	err := fs.Parse(args)
 	if err != nil {
@@ -76,6 +80,11 @@ func apiServer(conf *Config, args []string) error {
 		Context:    context.Background(),
 		StorageDSN: storageBackend,
 	}
+
+	if logVerbose {
+		serverConfig.ClientErrorLog = os.Stderr
+	}
+
 	s, err := plumbing.New(serverConfig)
 	if err != nil {
 		log.Fatal(err)

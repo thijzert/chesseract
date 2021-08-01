@@ -2,18 +2,59 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"sync"
 
 	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/client"
+	"github.com/thijzert/chesseract/chesseract/client/httpclient"
 	"github.com/thijzert/chesseract/chesseract/game"
 )
 
 var consoleMutex sync.Mutex
 
 func consoleGame(conf *Config, args []string) error {
+	logVerbose := false
+	clientConf := httpclient.ClientConfig{}
+
+	consoleSettings := flag.NewFlagSet("consoleClient", flag.ContinueOnError)
+	consoleSettings.StringVar(&clientConf.ServerURI, "server", "", "URI to multiplayer server")
+	consoleSettings.StringVar(&clientConf.Username, "username", "", "Online username")
+	consoleSettings.BoolVar(&logVerbose, "v", false, "Verbosely log all requests")
+	err := consoleSettings.Parse(args)
+	if err != nil {
+		return err
+	}
+
+	if logVerbose {
+		clientConf.VerboseRequestLogging = os.Stdout
+	}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var c client.Client
+	c, err = httpclient.New(ctx, clientConf)
+	if err != nil {
+		return err
+	}
+
+	g, err := c.NewGame(ctx, []game.Player{
+		{Name: "white"},
+		{Name: "black"},
+	})
+	if err != nil {
+		return err
+	}
+	cc := newConsoleClient(c, chesseract.BLACK)
+
+	return cc.Run(ctx, g)
+}
+
+func consoleLocalMultiplayer(conf *Config, args []string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 

@@ -2,12 +2,29 @@ package web
 
 import (
 	"net/http"
+
+	"github.com/thijzert/chesseract/chesseract/game"
 )
 
 // The Provider is the Handlers' interface to the data backend. It is assumed
 // that the Provider has performed all necessary context wrangling and cookie
 // consuming
 type Provider interface {
+	// NewSession generates a new empty session, and returns a string
+	// representation of its ID, to be communicated to the client.
+	NewSession() (string, error)
+
+	// Player returns the player associated with this session
+	Player() (game.Player, error)
+
+	// SetPlayer assigns this player to this session
+	SetPlayer(game.Player) error
+
+	// LookupPlayer finds the profile in the database, if it exists
+	LookupPlayer(string) (game.Player, bool, error)
+
+	// NewNonce generates a new auth challenge for this player
+	NewNonce(string) (string, error)
 }
 
 var (

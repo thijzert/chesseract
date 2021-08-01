@@ -119,15 +119,44 @@ type oneVoneClient struct {
 	resultIn chan []float64
 }
 
+// Me returns the object that represents the player at the server's end
+func (o *oneVoneClient) Me() (game.Player, error) {
+	// HACK: since this is just a 1v1, the only two that currently exist also happen to be in-game.
+	for _, pl := range o.server.Game.Players {
+		if pl.PlayingAs == o.colour {
+			return pl.Player, nil
+		}
+	}
+
+	return game.Player{}, fmt.Errorf("player does not exist")
+}
+
+// AvailablePlayers returns the list of players available for a match
+func (o *oneVoneClient) AvailablePlayers(context.Context) ([]game.Player, error) {
+	// HACK: since this is just a 1v1, the only two that currently exist also happen to be in-game.
+	rv := make([]game.Player, 0, 1)
+	for _, pl := range o.server.Game.Players {
+		if pl.PlayingAs != o.colour {
+			rv = append(rv, pl.Player)
+		}
+	}
+
+	return rv, nil
+}
+
 func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (*game.Game, error) {
 	if o.server.Game == nil {
 		o.server.Game = &game.Game{
-			Players: players,
 			Match: chesseract.Match{
 				RuleSet:   chesseract.Boring2D{},
 				Board:     chesseract.Boring2D{}.DefaultBoard(),
 				StartTime: time.Now(),
 			},
+		}
+		for i, c := range []chesseract.Colour{chesseract.WHITE, chesseract.BLACK} {
+			if len(players) > i {
+				o.server.Game.Players = append(o.server.Game.Players, game.MatchPlayer{players[i], c})
+			}
 		}
 	}
 	o.game = &game.Game{}

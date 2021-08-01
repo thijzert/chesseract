@@ -3,8 +3,12 @@ package plumbing
 import (
 	"context"
 	"html/template"
+	"io"
+	"log"
 	"net/http"
 
+	"github.com/thijzert/chesseract/chesseract/game"
+	"github.com/thijzert/chesseract/internal/notimplemented"
 	"github.com/thijzert/chesseract/internal/storage"
 	"github.com/thijzert/chesseract/web"
 )
@@ -15,6 +19,9 @@ type ServerConfig struct {
 
 	// A descriptor that initialises the storage backend
 	StorageDSN string
+
+	// Log errors here
+	ClientErrorLog io.Writer
 }
 
 // A Server wraps a HTTP frontend
@@ -24,6 +31,7 @@ type Server struct {
 	mux             *http.ServeMux
 	parsedTemplates map[string]*template.Template
 	storage         storage.Backend
+	errorLog        *log.Logger
 }
 
 // New instantiates a new server instance
@@ -32,6 +40,10 @@ func New(config ServerConfig) (*Server, error) {
 		context: config.Context,
 		config:  config,
 		mux:     http.NewServeMux(),
+	}
+
+	if config.ClientErrorLog != nil {
+		s.errorLog = log.New(config.ClientErrorLog, "client", log.Ltime|log.Lmicroseconds)
 	}
 
 	var err error
@@ -48,7 +60,11 @@ func New(config ServerConfig) (*Server, error) {
 
 	s.mux.Handle("/", s.HTMLFunc(web.HomeHandler, "full/home"))
 
+	s.mux.Handle("/api/session/new", s.JSONFunc(web.NewSessionHandler))
+	s.mux.Handle("/api/session/auth/response", s.JSONFunc(web.AuthResponseHandler))
+	s.mux.Handle("/api/session/auth", s.JSONFunc(web.AuthChallengeHandler))
 	// TODO: /api/...
+	s.mux.Handle("/api/", s.JSONFunc(web.ApiNotFoundHandler))
 
 	s.mux.HandleFunc("/assets/", s.serveStaticAsset)
 
@@ -74,17 +90,68 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-func (s *Server) getProvider(r *http.Request) web.Provider {
+func (s *Server) getProvider(r *http.Request) (web.Provider, storage.SessionID) {
+	// Set up a data provider
 	rv := webProvider{
-		Server: s,
+		Server:  s,
+		Context: r.Context(),
 	}
 
-	// TODO: set up provider: parse headers, check authenticators, etc.
+	var sessionID storage.SessionID
+	// Parse authentication header for session ID
+	if auth := r.Header.Get("Authorisation"); len(auth) > 10 {
+		ns, err := storage.ParseSessionID(auth[7:])
+		if err == nil {
+			_, err := s.storage.GetSession(ns)
+			if err == nil {
+				sessionID = ns
+			} else {
+				// Maybe differentiate between the session not existing and a generic database error
+			}
+		}
+	}
 
-	return rv
+	return rv, sessionID
 }
 
 // The webProvider is a web.Provider that uses the Server's data backend
 type webProvider struct {
-	Server *Server
+	Server  *Server
+	Context context.Context
+}
+
+// NewSession generates a new empty session, and returns a string
+// representation of its ID, to be communicated to the client.
+func (w webProvider) NewSession() (string, error) {
+	id, _, err := w.Server.storage.NewSession()
+	if err != nil {
+		return "", err
+	}
+	return id.String(), nil
+}
+
+// Player returns the player associated with this session
+func (w webProvider) Player() (game.Player, error) {
+	return game.Player{}, notimplemented.Error()
+}
+
+// SetPlayer assigns this player to this session
+func (w webProvider) SetPlayer(game.Player) error {
+	return notimplemented.Error()
+}
+
+// LookupPlayer finds the profile in the database, if it exists
+func (w webProvider) LookupPlayer(name string) (game.Player, bool, error) {
+	id, ok, err := w.Server.storage.LookupPlayer(name)
+	if !ok || err != nil {
+		return game.Player{}, ok, err
+	}
+
+	player, err := w.Server.storage.GetPlayer(id)
+	return player, ok, err
+}
+
+// NewNonce generates a new auth challenge for this player
+func (w webProvider) NewNonce(string) (string, error) {
+	return "", notimplemented.Error()
 }

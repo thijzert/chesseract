@@ -10,6 +10,12 @@ import (
 // The Client abstracts the interaction between a multiplayer system from the
 // context of one player.
 type Client interface {
+	// Me returns the object that represents the player at the server's end
+	Me() (game.Player, error)
+
+	// AvailablePlayers returns the list of players available for a match
+	AvailablePlayers(context.Context) ([]game.Player, error)
+
 	// NewGame initialises a Game with the specified players
 	NewGame(context.Context, []game.Player) (*game.Game, error)
 

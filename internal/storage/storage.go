@@ -42,6 +42,9 @@ type Backend interface {
 	// StorePlayer updates a modified Player in the datastore
 	StorePlayer(PlayerID, game.Player) error
 
+	// LookupPlayer looks up a player ID for a given user name
+	LookupPlayer(string) (PlayerID, bool, error)
+
 	// NewGame creates a new game
 	NewGame() (GameID, game.Game, error)
 

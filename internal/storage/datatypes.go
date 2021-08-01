@@ -2,6 +2,7 @@ package storage
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	mrand "math/rand"
 )
 
@@ -27,7 +28,22 @@ func NewSessionID() SessionID {
 	return SessionID{randomInt64(), randomInt64(), randomInt64(), randomInt64()}
 }
 
+func (s SessionID) IsEmpty() bool {
+	return s[0] == 0 && s[1] == 0 && s[2] == 0 && s[3] == 0
+}
+
+func (s SessionID) String() string {
+	return fmt.Sprintf("%016x-%016x-%016x-%016x", s[0], s[1], s[2], s[3])
+}
+
+func ParseSessionID(str string) (SessionID, error) {
+	var s SessionID
+	_, err := fmt.Sscanf(str, "%x-%x-%x-%x", &s[0], &s[1], &s[2], &s[3])
+	return s, err
+}
+
 type Session struct {
+	PlayerID PlayerID
 }
 
 // NewPlayerID generates a new PlayerID. The probability of colliding with a
