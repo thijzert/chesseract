@@ -54,7 +54,13 @@ func (${TYPE}Handler) handle${TYPE^}(p Provider, r ${TYPE}Request) (${TYPE^}Resp
 }
 
 func (${TYPE}Handler) DecodeRequest(r *http.Request) (Request, error) {
-	return ${TYPE}Request{}, nil
+	var rv ${TYPE}Request
+
+	// if r.Body == nil {
+	// 	return rv, errMethod("Method not allowed", "This is a POST resource")
+	// }
+
+	return rv, nil
 }
 
 // Below: boilerplate code
@@ -94,7 +100,7 @@ func TestDecode${TYPE^}Request(t *testing.T) {
 }
 
 func TestHandle${TYPE^}(t *testing.T) {
-	var p Provider
+	var p Provider = testProvider{}
 
 	req := ${TYPE}Request{
 	}

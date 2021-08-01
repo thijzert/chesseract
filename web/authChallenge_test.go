@@ -17,7 +17,7 @@ func TestDecodeAuthChallengeRequest(t *testing.T) {
 }
 
 func TestHandleAuthChallenge(t *testing.T) {
-	var p Provider
+	var p Provider = testProvider{}
 
 	req := AuthChallengeRequest{}
 

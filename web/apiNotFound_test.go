@@ -17,14 +17,12 @@ func TestDecodeApiNotFoundRequest(t *testing.T) {
 }
 
 func TestHandleApiNotFound(t *testing.T) {
-	var p Provider
+	var p Provider = testProvider{}
 
-	req := apiNotFoundRequest{
-	}
+	req := apiNotFoundRequest{}
 
 	resp, err := ApiNotFoundHandler.handleApiNotFound(p, req)
 
 	t.Logf("response: %+v; error: %s", resp, err)
 	t.Logf("TODO: implement unit test for handling ApiNotFound")
 }
-

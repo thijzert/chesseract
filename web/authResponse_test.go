@@ -17,7 +17,7 @@ func TestDecodeAuthResponseRequest(t *testing.T) {
 }
 
 func TestHandleAuthResponse(t *testing.T) {
-	var p Provider
+	var p Provider = testProvider{}
 
 	req := AuthResponseRequest{}
 

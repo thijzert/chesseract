@@ -25,7 +25,13 @@ func (authResponseHandler) handleAuthResponse(p Provider, r AuthResponseRequest)
 }
 
 func (authResponseHandler) DecodeRequest(r *http.Request) (Request, error) {
-	return AuthResponseRequest{}, nil
+	var rv AuthResponseRequest
+
+	if r.Body == nil {
+		return rv, errMethod("Method not allowed", "This is a POST resource")
+	}
+
+	return rv, nil
 }
 
 // Below: boilerplate code

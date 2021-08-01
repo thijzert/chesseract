@@ -80,3 +80,33 @@ func errNotFound(headline, message string) error {
 	rv = weberrors.WithMessage(rv, headline, message)
 	return rv
 }
+
+func errBadRequest(headline, message string) error {
+	rv := errors.New("bad request")
+	rv = weberrors.WithStatus(rv, 400)
+
+	if headline == "" {
+		headline = "Bad request"
+	}
+	if message == "" {
+		message = "The server cannot or will not process the request due to an apparent client error"
+	}
+
+	rv = weberrors.WithMessage(rv, headline, message)
+	return rv
+}
+
+func errMethod(headline, message string) error {
+	rv := errors.New("method not allowed")
+	rv = weberrors.WithStatus(rv, 405)
+
+	if headline == "" {
+		headline = "Method not allowed"
+	}
+	if message == "" {
+		message = "A request method is not supported for the requested resource"
+	}
+
+	rv = weberrors.WithMessage(rv, headline, message)
+	return rv
+}

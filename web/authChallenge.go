@@ -39,6 +39,10 @@ func (authChallengeHandler) handleAuthChallenge(p Provider, r AuthChallengeReque
 func (authChallengeHandler) DecodeRequest(r *http.Request) (Request, error) {
 	var rv AuthChallengeRequest
 
+	if r.Body == nil {
+		return rv, errMethod("Method not allowed", "This is a POST resource")
+	}
+
 	defer r.Body.Close()
 	dec := json.NewDecoder(r.Body)
 	err := weberrors.WithStatus(dec.Decode(&rv), 400)

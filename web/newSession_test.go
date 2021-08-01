@@ -18,7 +18,7 @@ func TestDecodeNewSessionRequest(t *testing.T) {
 }
 
 func TestHandleNewSession(t *testing.T) {
-	var p Provider
+	var p Provider = testProvider{}
 
 	req := newSessionRequest{}
 
