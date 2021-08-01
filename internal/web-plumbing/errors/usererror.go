@@ -1,5 +1,7 @@
 package weberrors
 
+import "errors"
+
 // A UserError is an error that may be shown to end users
 type UserError interface {
 	error
@@ -40,4 +42,32 @@ func (e userError) Headline() string {
 
 func (e userError) Message() string {
 	return e.message
+}
+
+// Message returns an error message that is safe to be shown to the user
+func Message(e error) string {
+	if e == nil {
+		return ""
+	}
+
+	var uerr UserError
+	if errors.As(e, &uerr) {
+		return uerr.Message()
+	}
+
+	return "an unexpected error occurred"
+}
+
+// Message returns a headline for an error that is safe to be shown to the user
+func Headline(e error) string {
+	if e == nil {
+		return ""
+	}
+
+	var uerr UserError
+	if errors.As(e, &uerr) {
+		return uerr.Headline()
+	}
+
+	return "internal server error"
 }

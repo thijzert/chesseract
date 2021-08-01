@@ -54,3 +54,59 @@ func HTTPStatusCode(e error) (statusCode int, cause error) {
 
 	return 0, e
 }
+
+type CodeError interface {
+	error
+	ErrorCode() int
+}
+
+type codeError struct {
+	Code  int
+	Cause error
+}
+
+func WithCode(e error, c int) CodeError {
+	if e == nil {
+		return nil
+	}
+
+	return codeError{
+		Code:  c,
+		Cause: e,
+	}
+}
+
+func (e codeError) Error() string {
+	return e.Cause.Error()
+}
+
+func (e codeError) Unwrap() error {
+	return e.Cause
+}
+
+func (e codeError) ErrorCode() int {
+	return e.Code
+}
+
+func ErrorCode(e error) (errorCode int, cause error) {
+	if e == nil {
+		return 0, nil
+	}
+
+	var errcode codeError
+	if errors.As(e, &errcode) {
+		return errcode.Code, errcode.Cause
+	}
+
+	var err CodeError
+	if errors.As(e, &err) {
+		return err.ErrorCode(), err
+	}
+
+	lastResort, cause := HTTPStatusCode(e)
+	if lastResort != 0 && lastResort != 200 {
+		return lastResort, cause
+	}
+
+	return 1, e
+}

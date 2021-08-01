@@ -200,6 +200,9 @@ func (h htmlHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
 		st = 500
 	}
 
+	headline := weberrors.Headline(err)
+	message := weberrors.Message(err)
+
 	w.WriteHeader(st)
-	fmt.Fprintf(w, "Error: %s", err)
+	fmt.Fprintf(w, "Error: %s - %s", headline, message)
 }

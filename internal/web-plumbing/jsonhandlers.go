@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	weberrors "github.com/thijzert/chesseract/internal/web-plumbing/errors"
 	"github.com/thijzert/chesseract/web"
 )
 
@@ -62,16 +63,21 @@ func (jsonHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
 	w.Header()["Content-Type"] = []string{"application/json"}
 	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
 
-	// TODO: we may need to set a different status entirely
-
-	w.WriteHeader(500)
-	errorResponse := struct {
-		errorCode    int
-		errorMessage string
-	}{
-		500, // TODO: error codes
-		err.Error(),
+	st, _ := weberrors.HTTPStatusCode(err)
+	if st == 0 {
+		st = 500
 	}
+	w.WriteHeader(st)
+
+	errorResponse := struct {
+		Code     int    `json:"error_code"`
+		Headline string `json:"error"`
+		Message  string `json:"message"`
+	}{}
+
+	errorResponse.Code, _ = weberrors.ErrorCode(err)
+	errorResponse.Headline = weberrors.Headline(err)
+	errorResponse.Message = weberrors.Message(err)
 
 	var b bytes.Buffer
 	e := json.NewEncoder(&b)
