@@ -32,3 +32,8 @@ func (t testProvider) LookupPlayer(string) (game.Player, bool, error) {
 func (t testProvider) NewNonce(string) (string, error) {
 	return "", notimplemented.Error()
 }
+
+// ValidateNonce checks if a nonce is valid for this player
+func (t testProvider) ValidateNonce(playerName string, nonce string) (bool, error) {
+	return false, notimplemented.Error()
+}

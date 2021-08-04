@@ -2,6 +2,7 @@ package plumbing
 
 import (
 	"context"
+	"errors"
 	"html/template"
 	"io"
 	"log"
@@ -97,27 +98,27 @@ func (s *Server) getProvider(r *http.Request) (web.Provider, storage.SessionID) 
 		Context: r.Context(),
 	}
 
-	var sessionID storage.SessionID
 	// Parse authentication header for session ID
 	if auth := r.Header.Get("Authorisation"); len(auth) > 10 {
 		ns, err := storage.ParseSessionID(auth[7:])
 		if err == nil {
 			_, err := s.storage.GetSession(ns)
 			if err == nil {
-				sessionID = ns
+				rv.SessionID = ns
 			} else {
 				// Maybe differentiate between the session not existing and a generic database error
 			}
 		}
 	}
 
-	return rv, sessionID
+	return rv, rv.SessionID
 }
 
 // The webProvider is a web.Provider that uses the Server's data backend
 type webProvider struct {
-	Server  *Server
-	Context context.Context
+	Server    *Server
+	Context   context.Context
+	SessionID storage.SessionID
 }
 
 // NewSession generates a new empty session, and returns a string
@@ -136,8 +137,25 @@ func (w webProvider) Player() (game.Player, error) {
 }
 
 // SetPlayer assigns this player to this session
-func (w webProvider) SetPlayer(game.Player) error {
-	return notimplemented.Error()
+func (w webProvider) SetPlayer(player game.Player) error {
+	// FIXME: this next line wtf
+	id, ok, err := w.Server.storage.LookupPlayer(player.Name)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("no such player")
+	}
+
+	// FIXME: run this in a transaction
+	sess, err := w.Server.storage.GetSession(w.SessionID)
+
+	if !sess.PlayerID.IsEmpty() {
+		return errors.New("you are already logged in")
+	}
+
+	sess.PlayerID = id
+	return w.Server.storage.StoreSession(w.SessionID, sess)
 }
 
 // LookupPlayer finds the profile in the database, if it exists
@@ -152,6 +170,32 @@ func (w webProvider) LookupPlayer(name string) (game.Player, bool, error) {
 }
 
 // NewNonce generates a new auth challenge for this player
-func (w webProvider) NewNonce(string) (string, error) {
-	return "", notimplemented.Error()
+func (w webProvider) NewNonce(playerName string) (string, error) {
+	id, ok, err := w.Server.storage.LookupPlayer(playerName)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", err
+	}
+
+	nonce, err := w.Server.storage.NewNonceForPlayer(id)
+	if err != nil {
+		return "", err
+	}
+
+	return nonce.String(), nil
+}
+
+// ValidateNonce checks if a nonce is valid for this player
+func (w webProvider) ValidateNonce(playerName string, nonce string) (bool, error) {
+	id, ok, err := w.Server.storage.LookupPlayer(playerName)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, nil
+	}
+
+	return w.Server.storage.CheckNonce(id, storage.Nonce(nonce))
 }

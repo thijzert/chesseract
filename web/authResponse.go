@@ -1,9 +1,11 @@
 package web
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 
-	"github.com/thijzert/chesseract/internal/notimplemented"
+	weberrors "github.com/thijzert/chesseract/internal/web-plumbing/errors"
 )
 
 var AuthResponseHandler authResponseHandler
@@ -20,8 +22,41 @@ type AuthResponseRequest struct {
 type AuthResponseResponse struct {
 }
 
-func (authResponseHandler) handleAuthResponse(p Provider, r AuthResponseRequest) (AuthResponseResponse, error) {
-	return AuthResponseResponse{}, notimplemented.Error()
+func (authResponseHandler) err401() error {
+	err := errors.New("authorisation required")
+	err = weberrors.WithStatus(err, 401)
+	return weberrors.WithMessage(err, "Authorisation required", "Your authorisation request failed. By all means, keep trying.")
+}
+
+func (h authResponseHandler) handleAuthResponse(p Provider, r AuthResponseRequest) (AuthResponseResponse, error) {
+	var rv AuthResponseResponse
+
+	player, ok, err := p.LookupPlayer(r.Username)
+	if err != nil {
+		return rv, err
+	}
+	if !ok {
+		return rv, h.err401()
+	}
+
+	ok, err = p.ValidateNonce(r.Username, r.Nonce)
+	if err != nil {
+		return rv, err
+	}
+	if !ok {
+		return rv, h.err401()
+	}
+
+	err = p.SetPlayer(player)
+	if err != nil {
+		return rv, err
+	}
+
+	// TODO: some form of authentication.
+
+	// TODO: this should invalidate all other sessions for this player
+
+	return rv, nil
 }
 
 func (authResponseHandler) DecodeRequest(r *http.Request) (Request, error) {
@@ -30,8 +65,10 @@ func (authResponseHandler) DecodeRequest(r *http.Request) (Request, error) {
 	if r.Body == nil {
 		return rv, errMethod("Method not allowed", "This is a POST resource")
 	}
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(&rv)
 
-	return rv, nil
+	return rv, err
 }
 
 // Below: boilerplate code

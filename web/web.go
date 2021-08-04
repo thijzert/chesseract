@@ -25,6 +25,9 @@ type Provider interface {
 
 	// NewNonce generates a new auth challenge for this player
 	NewNonce(string) (string, error)
+
+	// ValidateNonce checks if a nonce is valid for this player
+	ValidateNonce(playerName string, nonce string) (bool, error)
 }
 
 var (

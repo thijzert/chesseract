@@ -31,6 +31,10 @@ type Dory struct {
 
 	// games stores all past and active games
 	games map[GameID]game.Game
+
+	// noncePlayer and playerNonce store all noncePlayer
+	noncePlayer map[Nonce]PlayerID
+	playerNonce map[PlayerID]Nonce
 }
 
 func (d *Dory) String() string {
@@ -44,6 +48,8 @@ func (d *Dory) Initialise() error {
 	d.sessions = make(map[SessionID]Session)
 	d.players = make(map[PlayerID]game.Player)
 	d.games = make(map[GameID]game.Game)
+	d.noncePlayer = make(map[Nonce]PlayerID)
+	d.playerNonce = make(map[PlayerID]Nonce)
 
 	d.mu.Unlock()
 
@@ -161,6 +167,44 @@ func (d *Dory) LookupPlayer(name string) (PlayerID, bool, error) {
 	}
 
 	return PlayerID{}, false, nil
+}
+
+// NewNonceForPlayer generates a new nonce, and assigns it to the player
+// It should also invalidate any existing nonces for this player.
+func (d *Dory) NewNonceForPlayer(id PlayerID) (Nonce, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if _, ok := d.players[id]; !ok {
+		return "", errNotPresent
+	}
+
+	if non, ok := d.playerNonce[id]; ok {
+		delete(d.noncePlayer, non)
+	}
+	nonce := NewNonce()
+	d.noncePlayer[nonce] = id
+	d.playerNonce[id] = nonce
+
+	return nonce, nil
+}
+
+// CheckNonce checks if the nonce exists, and is assigned to that player. A
+// successful result invalidates the nonce. (Implied in the 'once' part in
+// 'nonce')
+func (d *Dory) CheckNonce(id PlayerID, nonce Nonce) (bool, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	observedID, ok := d.noncePlayer[nonce]
+	if !ok || observedID != id {
+		return false, nil
+	}
+
+	delete(d.noncePlayer, nonce)
+	delete(d.playerNonce, observedID)
+
+	return true, nil
 }
 
 // NewGame creates a new game

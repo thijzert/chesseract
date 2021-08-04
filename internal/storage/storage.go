@@ -45,6 +45,15 @@ type Backend interface {
 	// LookupPlayer looks up a player ID for a given user name
 	LookupPlayer(string) (PlayerID, bool, error)
 
+	// NewNonceForPlayer generates a new nonce, and assigns it to the player
+	// It should also invalidate any existing nonces for this player.
+	NewNonceForPlayer(PlayerID) (Nonce, error)
+
+	// CheckNonce checks if the nonce exists, and is assigned to that player. A
+	// successful result invalidates the nonce. (Implied in the 'once' part in
+	// 'nonce')
+	CheckNonce(PlayerID, Nonce) (bool, error)
+
 	// NewGame creates a new game
 	NewGame() (GameID, game.Game, error)
 

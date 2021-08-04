@@ -54,10 +54,26 @@ func NewPlayerID() PlayerID {
 	return PlayerID{randomInt64(), randomInt64()}
 }
 
-// NewGameID generates a new GameID. The probability of colliding with a
-// previously generated GameID should be around 2^-64.
+func (p PlayerID) IsEmpty() bool {
+	return p[0] == 0 && p[1] == 0
+}
+
 type GameID [2]uint64
 
+// NewGameID generates a new GameID. The probability of colliding with a
+// previously generated GameID should be around 2^-64.
 func NewGameID() GameID {
 	return GameID{randomInt64(), randomInt64()}
+}
+
+type Nonce string
+
+// NewGameID generates a new GameID. The probability of colliding with a
+// previously generated GameID should be around 2^-64.
+func NewNonce() Nonce {
+	return Nonce(fmt.Sprintf("%016x-%016x", randomInt64(), randomInt64()))
+}
+
+func (n Nonce) String() string {
+	return string(n)
 }

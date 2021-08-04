@@ -59,6 +59,8 @@ func (${TYPE}Handler) DecodeRequest(r *http.Request) (Request, error) {
 	// if r.Body == nil {
 	// 	return rv, errMethod("Method not allowed", "This is a POST resource")
 	// }
+	// dec := json.NewDecoder(r.Body)
+	// err := dec.Decode(&rv)
 
 	return rv, nil
 }
