@@ -8,6 +8,7 @@ import (
 	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/game"
+	"github.com/thijzert/chesseract/internal/notimplemented"
 )
 
 type oneVoneServer struct {
@@ -144,7 +145,7 @@ func (o *oneVoneClient) AvailablePlayers(context.Context) ([]game.Player, error)
 	return rv, nil
 }
 
-func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (*game.Game, error) {
+func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (client.GameSession, error) {
 	if o.server.Game == nil {
 		o.server.Game = &game.Game{
 			Match: chesseract.Match{
@@ -167,17 +168,22 @@ func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (*game
 	o.game.Match.StartTime = o.server.Game.Match.StartTime
 	o.game.Match.Moves = append(o.game.Match.Moves, o.server.Game.Match.Moves...)
 
-	return o.game, nil
+	return o, nil
+}
+
+// Game returns the Game object of this session
+func (o *oneVoneClient) Game() *game.Game {
+	return o.game
 }
 
 // SubmitMove submits a move by this player.
-func (o *oneVoneClient) SubmitMove(ctx context.Context, g *game.Game, move chesseract.Move) error {
-	return o.server.SubmitMove(o, g, move)
+func (o *oneVoneClient) SubmitMove(ctx context.Context, move chesseract.Move) error {
+	return o.server.SubmitMove(o, o.game, move)
 }
 
 // NextMove waits until a move occurs, and returns it. This comprises moves
 // made by all players, not just opponents.
-func (o *oneVoneClient) NextMove(ctx context.Context, g *game.Game) (chesseract.Move, error) {
+func (o *oneVoneClient) NextMove(ctx context.Context) (chesseract.Move, error) {
 	select {
 	case <-ctx.Done():
 		return chesseract.Move{}, ctx.Err()
@@ -198,12 +204,12 @@ func (o *oneVoneClient) NextMove(ctx context.Context, g *game.Game) (chesseract.
 // opponents can evaluate and accept or reject. One can accept a proposed
 // result by proposing the same result again.
 // Proposing a nil or zero result is construed as rejecting a proposition.
-func (o *oneVoneClient) ProposeResult(ctx context.Context, g *game.Game, result []float64) error {
-	return o.server.SubmitResult(o, g, result)
+func (o *oneVoneClient) ProposeResult(ctx context.Context, result []float64) error {
+	return o.server.SubmitResult(o, o.game, result)
 }
 
 // NextProposition waits until a result is proposed, and returns it.
-func (o *oneVoneClient) NextProposition(ctx context.Context, _ *game.Game) ([]float64, error) {
+func (o *oneVoneClient) NextProposition(ctx context.Context) ([]float64, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -214,6 +220,6 @@ func (o *oneVoneClient) NextProposition(ctx context.Context, _ *game.Game) ([]fl
 }
 
 // GetResult retrieves the result for this game
-func (o *oneVoneClient) GetResult(context.Context, *game.Game) ([]float64, error) {
-	return nil, fmt.Errorf("not implemented")
+func (o *oneVoneClient) GetResult(context.Context) ([]float64, error) {
+	return nil, notimplemented.Error()
 }

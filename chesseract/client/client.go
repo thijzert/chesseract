@@ -17,25 +17,30 @@ type Client interface {
 	AvailablePlayers(context.Context) ([]game.Player, error)
 
 	// NewGame initialises a Game with the specified players
-	NewGame(context.Context, []game.Player) (*game.Game, error)
+	NewGame(context.Context, []game.Player) (GameSession, error)
+}
+
+type GameSession interface {
+	// Game returns the Game object of this session
+	Game() *game.Game
 
 	// SubmitMove submits a move by this player.
-	SubmitMove(context.Context, *game.Game, chesseract.Move) error
+	SubmitMove(context.Context, chesseract.Move) error
 
 	// NextMove waits until a move occurs, and returns it. This comprises moves
 	// made by all players, not just opponents. NextMove returns the move made,
 	// but is also assumed to have applied the move to the supplied Game.
-	NextMove(context.Context, *game.Game) (chesseract.Move, error)
+	NextMove(context.Context) (chesseract.Move, error)
 
 	// ProposeResult submits a possible final outcome for this game, which all
 	// opponents can evaluate and accept or reject. One can accept a proposed
 	// result by proposing the same result again.
 	// Proposing a nil or zero result is construed as rejecting a proposition.
-	ProposeResult(context.Context, *game.Game, []float64) error
+	ProposeResult(context.Context, []float64) error
 
 	// NextProposition waits until a result is proposed, and returns it.
-	NextProposition(context.Context, *game.Game) ([]float64, error)
+	NextProposition(context.Context) ([]float64, error)
 
 	// GetResult retrieves the result for this game
-	GetResult(context.Context, *game.Game) ([]float64, error)
+	GetResult(context.Context) ([]float64, error)
 }

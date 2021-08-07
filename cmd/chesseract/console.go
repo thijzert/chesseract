@@ -49,9 +49,9 @@ func consoleGame(conf *Config, args []string) error {
 	if err != nil {
 		return err
 	}
-	cc := newConsoleClient(c, chesseract.BLACK)
+	cc := newConsoleClient(g, chesseract.BLACK)
 
-	return cc.Run(ctx, g)
+	return cc.Run(ctx)
 }
 
 func consoleLocalMultiplayer(conf *Config, args []string) error {
@@ -74,8 +74,8 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 			return
 		}
 
-		cc := newConsoleClient(c, col)
-		errs <- cc.Run(ctx, g)
+		cc := newConsoleClient(g, col)
+		errs <- cc.Run(ctx)
 	}
 
 	go run(s.B, chesseract.BLACK)
@@ -95,21 +95,22 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 }
 
 type consoleClient struct {
-	Client client.Client
-	PlayAs chesseract.Colour
+	Session client.GameSession
+	PlayAs  chesseract.Colour
 }
 
-func newConsoleClient(c client.Client, playAs chesseract.Colour) consoleClient {
+func newConsoleClient(sesh client.GameSession, playAs chesseract.Colour) consoleClient {
 	return consoleClient{
-		Client: c,
-		PlayAs: playAs,
+		Session: sesh,
+		PlayAs:  playAs,
 	}
 }
 
-func (cc consoleClient) Run(ctx context.Context, g *game.Game) error {
+func (cc consoleClient) Run(ctx context.Context) error {
+	g := cc.Session.Game()
 	for ctx.Err() == nil {
 		for g.Match.Board.Turn != cc.PlayAs {
-			_, err := cc.Client.NextMove(ctx, g)
+			_, err := cc.Session.NextMove(ctx)
 			if err != nil {
 				return err
 			}
@@ -163,14 +164,14 @@ func (cc consoleClient) Run(ctx context.Context, g *game.Game) error {
 			break
 		}
 
-		cc.Client.SubmitMove(ctx, g, move)
+		cc.Session.SubmitMove(ctx, move)
 		type moveErr struct {
 			Move chesseract.Move
 			Err  error
 		}
 		ch := make(chan moveErr)
 		go func() {
-			otherMove, err := cc.Client.NextMove(ctx, g)
+			otherMove, err := cc.Session.NextMove(ctx)
 			ch <- moveErr{otherMove, err}
 			close(ch)
 		}()

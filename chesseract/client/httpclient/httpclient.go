@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/thijzert/chesseract/chesseract"
+	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/game"
 	"github.com/thijzert/chesseract/internal/notimplemented"
 	"github.com/thijzert/chesseract/web"
@@ -204,7 +205,7 @@ func (c *HttpClient) AvailablePlayers(context.Context) ([]game.Player, error) {
 }
 
 // NewGame initialises a Game with the specified players
-func (c *HttpClient) NewGame(context.Context, []game.Player) (*game.Game, error) {
+func (c *HttpClient) NewGame(context.Context, []game.Player) (client.GameSession, error) {
 	return nil, notimplemented.Error()
 }
 
