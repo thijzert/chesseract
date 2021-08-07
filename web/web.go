@@ -28,6 +28,9 @@ type Provider interface {
 
 	// ValidateNonce checks if a nonce is valid for this player
 	ValidateNonce(playerName string, nonce string) (bool, error)
+
+	// NewGame creates a new game with the specified players, and returns its game ID
+	NewGame(ruleset string, playerNames []string) (string, error)
 }
 
 var (

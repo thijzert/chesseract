@@ -66,6 +66,16 @@ func NewGameID() GameID {
 	return GameID{randomInt64(), randomInt64()}
 }
 
+func (g GameID) String() string {
+	return fmt.Sprintf("%016x-%016x", g[0], g[1])
+}
+
+func ParseGameID(str string) (GameID, error) {
+	var g GameID
+	_, err := fmt.Sscanf(str, "%x-%x", &g[0], &g[1])
+	return g, err
+}
+
 type Nonce string
 
 // NewGameID generates a new GameID. The probability of colliding with a

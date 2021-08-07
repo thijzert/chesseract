@@ -50,19 +50,22 @@ type ${TYPE^}Response struct{
 }
 
 func (${TYPE}Handler) handle${TYPE^}(p Provider, r ${TYPE}Request) (${TYPE^}Response, error) {
-	return ${TYPE^}Response{}, notimplemented.Error()
+	var rv ${TYPE^}Response
+
+	return rv, notimplemented.Error()
 }
 
 func (${TYPE}Handler) DecodeRequest(r *http.Request) (Request, error) {
 	var rv ${TYPE}Request
+	var err error
 
 	// if r.Body == nil {
 	// 	return rv, errMethod("Method not allowed", "This is a POST resource")
 	// }
 	// dec := json.NewDecoder(r.Body)
-	// err := dec.Decode(&rv)
+	// err = dec.Decode(&rv)
 
-	return rv, nil
+	return rv, err
 }
 
 // Below: boilerplate code

@@ -19,6 +19,7 @@ import (
 	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/game"
 	"github.com/thijzert/chesseract/internal/notimplemented"
+	"github.com/thijzert/chesseract/internal/storage"
 	"github.com/thijzert/chesseract/web"
 	http2curl "moul.io/http2curl/v2"
 )
@@ -49,6 +50,8 @@ type HttpClient struct {
 	sessionToken string
 
 	requestLogger *log.Logger
+
+	gameIDs map[*game.Game]storage.GameID
 }
 
 func New(ctx context.Context, c ClientConfig) (*HttpClient, error) {
@@ -67,6 +70,8 @@ func New(ctx context.Context, c ClientConfig) (*HttpClient, error) {
 		},
 
 		baseURI: c.ServerURI,
+
+		gameIDs: make(map[*game.Game]storage.GameID),
 	}
 
 	if c.VerboseRequestLogging != nil {
@@ -205,19 +210,51 @@ func (c *HttpClient) AvailablePlayers(context.Context) ([]game.Player, error) {
 }
 
 // NewGame initialises a Game with the specified players
-func (c *HttpClient) NewGame(context.Context, []game.Player) (client.GameSession, error) {
-	return nil, notimplemented.Error()
+func (c *HttpClient) NewGame(ctx context.Context, players []game.Player) (client.GameSession, error) {
+	newgame := web.NewGameRequest{
+		RuleSet: "Boring2D",
+	}
+	for _, pl := range players {
+		newgame.PlayerNames = append(newgame.PlayerNames, pl.Name)
+	}
+	var gameid web.NewGameResponse
+	err := c.post(ctx, &gameid, "/api/game/new", nil, newgame)
+	if err != nil {
+		return nil, errors.Wrap(err, "error starting new game")
+	}
+
+	rv := &httpSession{
+		Client: c,
+		GameID: gameid.GameID,
+		game:   &game.Game{},
+	}
+
+	// TODO: Query the server to see if any moves were already saved
+	// TODO: Apply those locally
+
+	return rv, nil
+}
+
+type httpSession struct {
+	Client *HttpClient
+	GameID string
+	game   *game.Game
+}
+
+// Game returns the Game object of this session
+func (s *httpSession) Game() *game.Game {
+	return s.game
 }
 
 // SubmitMove submits a move by this player.
-func (c *HttpClient) SubmitMove(context.Context, *game.Game, chesseract.Move) error {
+func (s *httpSession) SubmitMove(context.Context, chesseract.Move) error {
 	return notimplemented.Error()
 }
 
 // NextMove waits until a move occurs, and returns it. This comprises moves
 // made by all players, not just opponents. NextMove returns the move made,
 // but is also assumed to have applied the move to the supplied Game.
-func (c *HttpClient) NextMove(context.Context, *game.Game) (chesseract.Move, error) {
+func (s *httpSession) NextMove(context.Context) (chesseract.Move, error) {
 	return chesseract.Move{}, notimplemented.Error()
 }
 
@@ -225,16 +262,16 @@ func (c *HttpClient) NextMove(context.Context, *game.Game) (chesseract.Move, err
 // opponents can evaluate and accept or reject. One can accept a proposed
 // result by proposing the same result again.
 // Proposing a nil or zero result is construed as rejecting a proposition.
-func (c *HttpClient) ProposeResult(context.Context, *game.Game, []float64) error {
+func (s *httpSession) ProposeResult(context.Context, []float64) error {
 	return notimplemented.Error()
 }
 
 // NextProposition waits until a result is proposed, and returns it.
-func (c *HttpClient) NextProposition(context.Context, *game.Game) ([]float64, error) {
+func (s *httpSession) NextProposition(context.Context) ([]float64, error) {
 	return nil, notimplemented.Error()
 }
 
 // GetResult retrieves the result for this game
-func (c *HttpClient) GetResult(context.Context, *game.Game) ([]float64, error) {
+func (s *httpSession) GetResult(context.Context) ([]float64, error) {
 	return nil, notimplemented.Error()
 }
