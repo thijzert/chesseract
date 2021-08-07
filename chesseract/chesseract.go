@@ -124,6 +124,9 @@ func (m Move) String() string {
 
 // The RuleSet captures the details in a chess variant
 type RuleSet interface {
+	// PlayerColours returns the colour each player uses, and the order in which they play
+	PlayerColours() []Colour
+
 	// DefaultBoard sets up the initial board configuration
 	DefaultBoard() Board
 

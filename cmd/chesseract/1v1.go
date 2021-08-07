@@ -153,7 +153,7 @@ func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (*game
 				StartTime: time.Now(),
 			},
 		}
-		for i, c := range []chesseract.Colour{chesseract.WHITE, chesseract.BLACK} {
+		for i, c := range o.server.Game.Match.RuleSet.PlayerColours() {
 			if len(players) > i {
 				o.server.Game.Players = append(o.server.Game.Players, game.MatchPlayer{players[i], c})
 			}

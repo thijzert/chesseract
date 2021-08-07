@@ -27,6 +27,10 @@ func (p position2D) CellColour() Colour {
 // The Boring2D type implements the old 2D 8x8 board we're so used to by now
 type Boring2D struct{}
 
+func (Boring2D) PlayerColours() []Colour {
+	return []Colour{WHITE, BLACK}
+}
+
 // DefaultBoard sets up the initial board configuration
 func (Boring2D) DefaultBoard() Board {
 	return Board{

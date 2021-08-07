@@ -26,6 +26,10 @@ func (p debugPosition) CellColour() Colour {
 // The debugRules exist solely to get 100% test covfefe
 type debugRules struct{}
 
+func (debugRules) PlayerColours() []Colour {
+	return []Colour{WHITE, BLACK}
+}
+
 // DefaultBoard sets up the initial board configuration
 func (debugRules) DefaultBoard() Board {
 	return Board{

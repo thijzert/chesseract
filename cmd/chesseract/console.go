@@ -43,8 +43,8 @@ func consoleGame(conf *Config, args []string) error {
 	}
 
 	g, err := c.NewGame(ctx, []game.Player{
-		{Name: "white"},
-		{Name: "black"},
+		{Name: "alice"},
+		{Name: "bob"},
 	})
 	if err != nil {
 		return err
