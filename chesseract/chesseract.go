@@ -124,6 +124,8 @@ func (m Move) String() string {
 
 // The RuleSet captures the details in a chess variant
 type RuleSet interface {
+	fmt.Stringer
+
 	// PlayerColours returns the colour each player uses, and the order in which they play
 	PlayerColours() []Colour
 
@@ -142,6 +144,31 @@ type RuleSet interface {
 
 	// ApplyMove performs a move on the board, and returns the resulting board
 	ApplyMove(Board, Move) (Board, error)
+}
+
+var registeredRuleSets map[string]func() RuleSet
+
+// RegisterRuleSet adds a named rule set to the registry
+func RegisterRuleSet(name string, f func() RuleSet) {
+	if registeredRuleSets == nil {
+		registeredRuleSets = make(map[string]func() RuleSet)
+	}
+	if _, ok := registeredRuleSets[name]; ok {
+		panic(fmt.Sprintf("The rule set '%s' is already registered", name))
+	}
+	registeredRuleSets[name] = f
+}
+
+// GetRuleSet retrieves a named rule set, and creates a new instance
+func GetRuleSet(name string) RuleSet {
+	if registeredRuleSets == nil {
+		return nil
+	}
+	f, ok := registeredRuleSets[name]
+	if !ok {
+		return nil
+	}
+	return f()
 }
 
 // A Match wraps a chess match

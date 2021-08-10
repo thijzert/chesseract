@@ -2,6 +2,12 @@ package chesseract
 
 import "fmt"
 
+func init() {
+	RegisterRuleSet("Boring2D", func() RuleSet {
+		return Boring2D{}
+	})
+}
+
 // A position2D represents a position on the old-fashioned 2D chess board
 type position2D [2]int
 
@@ -26,6 +32,10 @@ func (p position2D) CellColour() Colour {
 
 // The Boring2D type implements the old 2D 8x8 board we're so used to by now
 type Boring2D struct{}
+
+func (Boring2D) String() string {
+	return "Boring2D"
+}
 
 func (Boring2D) PlayerColours() []Colour {
 	return []Colour{WHITE, BLACK}
