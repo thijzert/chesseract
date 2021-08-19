@@ -39,6 +39,11 @@ func (t testProvider) ValidateNonce(playerName string, nonce string) (bool, erro
 }
 
 // NewGame creates a new game with the specified players, and returns its game ID
-func (t testProvider) NewGame(ruleset string, playerNames []string) (string, error) {
-	return "", notimplemented.Error()
+func (t testProvider) NewGame(ruleset string, playerNames []string) (string, *game.Game, error) {
+	return "", nil, notimplemented.Error()
+}
+
+// Game returns the game object
+func (t testProvider) Game() (*game.Game, error) {
+	return nil, notimplemented.Error()
 }

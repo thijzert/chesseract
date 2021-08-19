@@ -30,7 +30,10 @@ type Provider interface {
 	ValidateNonce(playerName string, nonce string) (bool, error)
 
 	// NewGame creates a new game with the specified players, and returns its game ID
-	NewGame(ruleset string, playerNames []string) (string, error)
+	NewGame(ruleset string, playerNames []string) (string, *game.Game, error)
+
+	// Game returns the game object
+	Game() (*game.Game, error)
 }
 
 var (

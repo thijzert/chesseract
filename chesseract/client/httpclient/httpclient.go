@@ -226,7 +226,7 @@ func (c *HttpClient) NewGame(ctx context.Context, players []game.Player) (client
 	rv := &httpSession{
 		Client: c,
 		GameID: gameid.GameID,
-		game:   &game.Game{},
+		game:   gameid.Game,
 	}
 
 	// TODO: Query the server to see if any moves were already saved
@@ -239,6 +239,24 @@ type httpSession struct {
 	Client *HttpClient
 	GameID string
 	game   *game.Game
+}
+
+func (s *httpSession) get(ctx context.Context, rv interface{}, path string, params url.Values) error {
+	if params == nil {
+		params = url.Values{}
+	}
+	params.Set("gameid", s.GameID)
+
+	return s.Client.get(ctx, rv, path, params)
+}
+
+func (s *httpSession) post(ctx context.Context, rv interface{}, path string, params url.Values, contents interface{}) error {
+	if params == nil {
+		params = url.Values{}
+	}
+	params.Set("gameid", s.GameID)
+
+	return s.Client.post(ctx, rv, path, params, contents)
 }
 
 // Game returns the Game object of this session
@@ -254,8 +272,25 @@ func (s *httpSession) SubmitMove(context.Context, chesseract.Move) error {
 // NextMove waits until a move occurs, and returns it. This comprises moves
 // made by all players, not just opponents. NextMove returns the move made,
 // but is also assumed to have applied the move to the supplied Game.
-func (s *httpSession) NextMove(context.Context) (chesseract.Move, error) {
-	return chesseract.Move{}, notimplemented.Error()
+func (s *httpSession) NextMove(ctx context.Context) (chesseract.Move, error) {
+	v := url.Values{}
+	v.Set("nextindex", fmt.Sprintf("%d", len(s.game.Match.Moves)))
+	var rv web.NextMoveResponse
+
+	first := true
+
+	for rv.Move == nil {
+		err := s.get(ctx, &rv, "/api/game/next-move", v)
+		if err != nil {
+			return chesseract.Move{}, err
+		}
+		if !first {
+			time.Sleep(750 * time.Millisecond)
+		}
+		first = false
+	}
+
+	return *rv.Move, nil
 }
 
 // ProposeResult submits a possible final outcome for this game, which all

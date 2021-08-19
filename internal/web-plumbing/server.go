@@ -68,6 +68,7 @@ func New(config ServerConfig) (*Server, error) {
 	s.mux.Handle("/api/session/auth", s.JSONFunc(web.AuthChallengeHandler))
 
 	s.mux.Handle("/api/game/new", s.JSONFunc(web.NewGameHandler))
+	s.mux.Handle("/api/game/next-move", s.JSONFunc(web.NextMoveHandler))
 
 	// TODO: /api/...
 	s.mux.Handle("/api/", s.JSONFunc(web.ApiNotFoundHandler))
@@ -116,6 +117,13 @@ func (s *Server) getProvider(r *http.Request) (web.Provider, storage.SessionID) 
 		}
 	}
 
+	if gid := r.FormValue("gameid"); gid != "" {
+		g, err := storage.ParseGameID(gid)
+		if err == nil {
+			rv.GameID = g
+		}
+	}
+
 	return rv, rv.SessionID
 }
 
@@ -128,6 +136,7 @@ type webProvider struct {
 	Server    *Server
 	Context   context.Context
 	SessionID storage.SessionID
+	GameID    storage.GameID
 }
 
 // NewSession generates a new empty session, and returns a string
@@ -213,13 +222,13 @@ func (w webProvider) ValidateNonce(playerName string, nonce string) (bool, error
 }
 
 // NewGame creates a new game with the specified players, and returns its game ID
-func (w webProvider) NewGame(ruleset string, playerNames []string) (string, error) {
+func (w webProvider) NewGame(ruleset string, playerNames []string) (string, *game.Game, error) {
 	sess, err := w.Server.storage.GetSession(w.SessionID)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if sess.PlayerID.IsEmpty() {
-		return "", errors.New("you are already logged in")
+		return "", nil, errors.New("you are already logged in")
 	}
 
 	players := make([]game.Player, len(playerNames))
@@ -229,21 +238,21 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 	if ruleset == "Boring2D" {
 		rs = chesseract.Boring2D{}
 	} else {
-		return "", weberrors.WithStatus(errors.New("TODO: properly parse rulesets from a string"), 400)
+		return "", nil, weberrors.WithStatus(errors.New("TODO: properly parse rulesets from a string"), 400)
 	}
 
 	pc := rs.PlayerColours()
 	if len(playerNames) != len(pc) {
-		return "", weberrors.WithStatus(errors.New("incorrect number of players for this rule set"), 400)
+		return "", nil, weberrors.WithStatus(errors.New("incorrect number of players for this rule set"), 400)
 	}
 
 	for i, playerName := range playerNames {
 		id, ok, err := w.Server.storage.LookupPlayer(playerName)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		if !ok {
-			return "", errNoPlayer
+			return "", nil, errNoPlayer
 		}
 		if id == sess.PlayerID {
 			found = true
@@ -251,17 +260,20 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 
 		players[i], err = w.Server.storage.GetPlayer(id)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 	if !found {
-		return "", weberrors.WithMessage(weberrors.WithStatus(errors.New("you are already logged in"), 400), "You can't start a game for others", "Until I implement organising tournaments, you can only start a game if you're part of it.")
+		return "", nil, weberrors.WithMessage(weberrors.WithStatus(errors.New("you are already logged in"), 400), "You can't start a game for others", "Until I implement organising tournaments, you can only start a game if you're part of it.")
 	}
 
 	id, g, err := w.Server.storage.NewGame()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
+
+	// FIXME: make configurable
+	g.Match.RuleSet = chesseract.Boring2D{}
 
 	for i, c := range pc {
 		g.Players = append(g.Players, game.MatchPlayer{
@@ -270,10 +282,21 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 		})
 	}
 
+	g.Match.Board = g.Match.RuleSet.DefaultBoard()
+
 	err = w.Server.storage.StoreGame(id, g)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return id.String(), nil
+	return id.String(), &g, nil
+}
+
+func (w webProvider) Game() (*game.Game, error) {
+	rv, err := w.Server.storage.GetGame(w.GameID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rv, nil
 }

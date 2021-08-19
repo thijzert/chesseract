@@ -3,6 +3,8 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/thijzert/chesseract/chesseract/game"
 )
 
 var NewGameHandler newGameHandler
@@ -16,17 +18,19 @@ type NewGameRequest struct {
 
 // The NewGameResponse wraps a NewGameHandler API response
 type NewGameResponse struct {
-	GameID string
+	GameID string     `json:"gameid"`
+	Game   *game.Game `json:"game,omitempty"`
 }
 
 func (newGameHandler) handleNewGame(p Provider, r NewGameRequest) (NewGameResponse, error) {
 	var rv NewGameResponse
 
-	id, err := p.NewGame(r.RuleSet, r.PlayerNames)
+	id, g, err := p.NewGame(r.RuleSet, r.PlayerNames)
 	if err != nil {
 		return rv, err
 	}
 	rv.GameID = id
+	rv.Game = g
 
 	return rv, nil
 }
