@@ -62,6 +62,10 @@ type Backend interface {
 
 	// StoreGame updates a modified Game in the datastore
 	StoreGame(GameID, game.Game) error
+
+	// GetActiveGames returns the GameID's of all active games in which the
+	// Player identified by the PlayerID is a participant
+	GetActiveGames(PlayerID) ([]GameID, error)
 }
 
 type BackendFactory func(string) (Backend, error)

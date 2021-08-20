@@ -217,6 +217,27 @@ func (c *HttpClient) AvailablePlayers(context.Context) ([]game.Player, error) {
 	return nil, notimplemented.Error()
 }
 
+// ActiveGames returns the list of games in which the current player is involved
+func (c *HttpClient) ActiveGames(ctx context.Context) ([]client.GameSession, error) {
+	var activeGames web.ActiveGamesResponse
+	err := c.get(ctx, &activeGames, "/api/game/active-games", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting active games")
+	}
+
+	var rv []client.GameSession
+
+	for _, id := range activeGames.GameIDs {
+		sesh, err := c.sessionFromID(ctx, id)
+		if err != nil {
+			return rv, errors.Wrap(err, "error getting active games")
+		}
+		rv = append(rv, sesh)
+	}
+
+	return rv, nil
+}
+
 // NewGame initialises a Game with the specified players
 func (c *HttpClient) NewGame(ctx context.Context, players []game.Player) (client.GameSession, error) {
 	newgame := web.NewGameRequest{

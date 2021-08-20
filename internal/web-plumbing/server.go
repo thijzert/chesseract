@@ -10,7 +10,6 @@ import (
 
 	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/game"
-	"github.com/thijzert/chesseract/internal/notimplemented"
 	"github.com/thijzert/chesseract/internal/storage"
 	weberrors "github.com/thijzert/chesseract/internal/web-plumbing/errors"
 	"github.com/thijzert/chesseract/web"
@@ -68,8 +67,10 @@ func New(config ServerConfig) (*Server, error) {
 	s.mux.Handle("/api/session/auth", s.JSONFunc(web.AuthChallengeHandler))
 	s.mux.Handle("/api/session/me", s.JSONFunc(web.WhoAmIHandler))
 
+	s.mux.Handle("/api/game/active-games", s.JSONFunc(web.ActiveGamesHandler))
 	s.mux.Handle("/api/game/new", s.JSONFunc(web.NewGameHandler))
 	s.mux.Handle("/api/game/next-move", s.JSONFunc(web.NextMoveHandler))
+	s.mux.Handle("/api/game", s.JSONFunc(web.GetGameHandler))
 
 	// TODO: /api/...
 	s.mux.Handle("/api/", s.JSONFunc(web.ApiNotFoundHandler))
@@ -227,14 +228,47 @@ func (w webProvider) ValidateNonce(playerName string, nonce string) (bool, error
 	return w.Server.storage.CheckNonce(id, storage.Nonce(nonce))
 }
 
+// ActiveGames returns the list of active game ID's in which the player is involved
+func (w webProvider) ActiveGames() ([]string, error) {
+	if w.PlayerID.IsEmpty() {
+		return nil, errNoPlayer
+	}
+
+	gids, err := w.Server.storage.GetActiveGames(w.PlayerID)
+	if err != nil {
+		return nil, err
+	}
+	var rv []string
+	for _, gid := range gids {
+		rv = append(rv, gid.String())
+	}
+
+	return rv, nil
+}
+
+// GetGame retrieves a game by its ID
+func (w webProvider) GetGame(gameid string) (*game.Game, error) {
+	id, err := storage.ParseGameID(gameid)
+	if err != nil {
+		return nil, weberrors.WithCode(err, 400)
+	}
+
+	g, err := w.Server.storage.GetGame(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &g, nil
+}
+
 // NewGame creates a new game with the specified players, and returns its game ID
-func (w webProvider) NewGame(ruleset string, playerNames []string) (string, *game.Game, error) {
+func (w webProvider) NewGame(ruleset string, playerNames []string) (string, error) {
 	sess, err := w.Server.storage.GetSession(w.SessionID)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 	if sess.PlayerID.IsEmpty() {
-		return "", nil, errors.New("you are already logged in")
+		return "", errors.New("you are already logged in")
 	}
 
 	players := make([]game.Player, len(playerNames))
@@ -244,21 +278,21 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, *gam
 	if ruleset == "Boring2D" {
 		rs = chesseract.Boring2D{}
 	} else {
-		return "", nil, weberrors.WithStatus(errors.New("TODO: properly parse rulesets from a string"), 400)
+		return "", weberrors.WithStatus(errors.New("TODO: properly parse rulesets from a string"), 400)
 	}
 
 	pc := rs.PlayerColours()
 	if len(playerNames) != len(pc) {
-		return "", nil, weberrors.WithStatus(errors.New("incorrect number of players for this rule set"), 400)
+		return "", weberrors.WithStatus(errors.New("incorrect number of players for this rule set"), 400)
 	}
 
 	for i, playerName := range playerNames {
 		id, ok, err := w.Server.storage.LookupPlayer(playerName)
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
 		if !ok {
-			return "", nil, errNoPlayer
+			return "", errNoPlayer
 		}
 		if id == sess.PlayerID {
 			found = true
@@ -266,16 +300,16 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, *gam
 
 		players[i], err = w.Server.storage.GetPlayer(id)
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
 	}
 	if !found {
-		return "", nil, weberrors.WithMessage(weberrors.WithStatus(errors.New("you are already logged in"), 400), "You can't start a game for others", "Until I implement organising tournaments, you can only start a game if you're part of it.")
+		return "", weberrors.WithMessage(weberrors.WithStatus(errors.New("you are already logged in"), 400), "You can't start a game for others", "Until I implement organising tournaments, you can only start a game if you're part of it.")
 	}
 
 	id, g, err := w.Server.storage.NewGame()
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	// FIXME: make configurable
@@ -292,10 +326,10 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, *gam
 
 	err = w.Server.storage.StoreGame(id, g)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	return id.String(), &g, nil
+	return id.String(), nil
 }
 
 func (w webProvider) Game() (*game.Game, error) {

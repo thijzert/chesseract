@@ -16,6 +16,9 @@ type Client interface {
 	// AvailablePlayers returns the list of players available for a match
 	AvailablePlayers(context.Context) ([]game.Player, error)
 
+	// ActiveGames returns the list of games in which the current player is involved
+	ActiveGames(context.Context) ([]GameSession, error)
+
 	// NewGame initialises a Game with the specified players
 	NewGame(context.Context, []game.Player) (GameSession, error)
 }

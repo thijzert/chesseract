@@ -42,13 +42,24 @@ func consoleGame(conf *Config, args []string) error {
 		return err
 	}
 
-	g, err := c.NewGame(ctx, []game.Player{
-		{Name: "alice"},
-		{Name: "bob"},
-	})
+	var g client.GameSession
+	ag, err := c.ActiveGames(ctx)
 	if err != nil {
 		return err
 	}
+
+	if len(ag) > 0 {
+		g = ag[0]
+	} else {
+		g, err = c.NewGame(ctx, []game.Player{
+			{Name: "alice"},
+			{Name: "bob"},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	cc := newConsoleClient(g)
 
 	return cc.Run(ctx)

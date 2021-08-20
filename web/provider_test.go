@@ -38,12 +38,22 @@ func (t testProvider) ValidateNonce(playerName string, nonce string) (bool, erro
 	return false, notimplemented.Error()
 }
 
-// NewGame creates a new game with the specified players, and returns its game ID
-func (t testProvider) NewGame(ruleset string, playerNames []string) (string, *game.Game, error) {
-	return "", nil, notimplemented.Error()
+// ActiveGames returns the list of active game ID's in which the player is involved
+func (t testProvider) ActiveGames() ([]string, error) {
+	return nil, notimplemented.Error()
 }
 
-// Game returns the game object
+// GetGame retrieves a game by its ID
+func (t testProvider) GetGame(gameid string) (*game.Game, error) {
+	return nil, notimplemented.Error()
+}
+
+// NewGame creates a new game with the specified players, and returns its game ID
+func (t testProvider) NewGame(ruleset string, playerNames []string) (string, error) {
+	return "", notimplemented.Error()
+}
+
+// Game returns the game object of the currently active game session, if applicable
 func (t testProvider) Game() (*game.Game, error) {
 	return nil, notimplemented.Error()
 }

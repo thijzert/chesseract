@@ -145,7 +145,23 @@ func (o *oneVoneClient) AvailablePlayers(context.Context) ([]game.Player, error)
 	return rv, nil
 }
 
-func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (client.GameSession, error) {
+func (o *oneVoneClient) ActiveGames(context.Context) ([]client.GameSession, error) {
+	if o.server.Game == nil {
+		return nil, nil
+	} else if o.game == nil {
+		o.game = &game.Game{}
+		o.game.Players = append(o.game.Players, o.server.Game.Players...)
+		o.game.Match.RuleSet = o.server.Game.Match.RuleSet
+		o.game.Match.Board.Turn = o.server.Game.Match.Board.Turn
+		o.game.Match.Board.Pieces = append(o.game.Match.Board.Pieces, o.server.Game.Match.Board.Pieces...)
+		o.game.Match.StartTime = o.server.Game.Match.StartTime
+		o.game.Match.Moves = append(o.game.Match.Moves, o.server.Game.Match.Moves...)
+	}
+
+	return []client.GameSession{o}, nil
+}
+
+func (o *oneVoneClient) NewGame(ctx context.Context, players []game.Player) (client.GameSession, error) {
 	if o.server.Game == nil {
 		o.server.Game = &game.Game{
 			Match: chesseract.Match{
@@ -156,17 +172,16 @@ func (o *oneVoneClient) NewGame(_ context.Context, players []game.Player) (clien
 		}
 		for i, c := range o.server.Game.Match.RuleSet.PlayerColours() {
 			if len(players) > i {
-				o.server.Game.Players = append(o.server.Game.Players, game.MatchPlayer{players[i], c})
+				o.server.Game.Players = append(o.server.Game.Players, game.MatchPlayer{
+					Player:    players[i],
+					PlayingAs: c,
+				})
 			}
 		}
 	}
-	o.game = &game.Game{}
-	o.game.Players = append(o.game.Players, o.server.Game.Players...)
-	o.game.Match.RuleSet = o.server.Game.Match.RuleSet
-	o.game.Match.Board.Turn = o.server.Game.Match.Board.Turn
-	o.game.Match.Board.Pieces = append(o.game.Match.Board.Pieces, o.server.Game.Match.Board.Pieces...)
-	o.game.Match.StartTime = o.server.Game.Match.StartTime
-	o.game.Match.Moves = append(o.game.Match.Moves, o.server.Game.Match.Moves...)
+
+	// Create client-side game copy
+	o.ActiveGames(ctx)
 
 	return o, nil
 }

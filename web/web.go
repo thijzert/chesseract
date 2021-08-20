@@ -29,10 +29,16 @@ type Provider interface {
 	// ValidateNonce checks if a nonce is valid for this player
 	ValidateNonce(playerName string, nonce string) (bool, error)
 
-	// NewGame creates a new game with the specified players, and returns its game ID
-	NewGame(ruleset string, playerNames []string) (string, *game.Game, error)
+	// ActiveGames returns the list of active game ID's in which the player is involved
+	ActiveGames() ([]string, error)
 
-	// Game returns the game object
+	// GetGame retrieves a game by its ID
+	GetGame(gameid string) (*game.Game, error)
+
+	// NewGame creates a new game with the specified players, and returns its game ID
+	NewGame(ruleset string, playerNames []string) (string, error)
+
+	// Game returns the game object of the currently active game session, if applicable
 	Game() (*game.Game, error)
 }
 

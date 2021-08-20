@@ -237,3 +237,26 @@ func (d *Dory) StoreGame(id GameID, match game.Game) error {
 
 	return nil
 }
+
+// GetActiveGames returns the GameID's of all active games in which the
+// Player identified by the PlayerID is a participant
+func (d *Dory) GetActiveGames(id PlayerID) ([]GameID, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	player, ok := d.players[id]
+	if !ok {
+		return nil, errNotPresent
+	}
+
+	var rv []GameID
+	for id, g := range d.games {
+		for _, p := range g.Players {
+			if p.Name == player.Name && p.Realm == player.Realm {
+				rv = append(rv, id)
+			}
+		}
+	}
+
+	return rv, nil
+}
