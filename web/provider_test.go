@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/game"
 	"github.com/thijzert/chesseract/internal/notimplemented"
 )
@@ -56,4 +57,8 @@ func (t testProvider) NewGame(ruleset string, playerNames []string) (string, err
 // Game returns the game object of the currently active game session, if applicable
 func (t testProvider) Game() (*game.Game, error) {
 	return nil, notimplemented.Error()
+}
+
+func (t testProvider) SubmitMove(chesseract.Move) error {
+	return notimplemented.Error()
 }

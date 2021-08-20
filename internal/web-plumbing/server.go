@@ -7,8 +7,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/thijzert/chesseract/chesseract"
+	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/game"
 	"github.com/thijzert/chesseract/internal/storage"
 	weberrors "github.com/thijzert/chesseract/internal/web-plumbing/errors"
@@ -69,6 +71,7 @@ func New(config ServerConfig) (*Server, error) {
 
 	s.mux.Handle("/api/game/active-games", s.JSONFunc(web.ActiveGamesHandler))
 	s.mux.Handle("/api/game/new", s.JSONFunc(web.NewGameHandler))
+	s.mux.Handle("/api/game/move", s.JSONFunc(web.MoveHandler))
 	s.mux.Handle("/api/game/next-move", s.JSONFunc(web.NextMoveHandler))
 	s.mux.Handle("/api/game", s.JSONFunc(web.GetGameHandler))
 
@@ -339,4 +342,29 @@ func (w webProvider) Game() (*game.Game, error) {
 	}
 
 	return &rv, nil
+}
+
+func (w webProvider) SubmitMove(mov chesseract.Move) error {
+	return w.Server.storage.Transaction(func() error {
+		g, err := w.Server.storage.GetGame(w.GameID)
+		if err != nil {
+			return err
+		}
+
+		newb, err := g.Match.RuleSet.ApplyMove(g.Match.Board, mov)
+		if err != nil {
+			return client.ErrIllegalMove
+		}
+
+		// Reset the time from a centralised source
+		mov.Time = time.Since(g.Match.StartTime)
+		for _, m := range g.Match.Moves {
+			mov.Time -= m.Time
+		}
+
+		g.Match.Board = newb
+		g.Match.Moves = append(g.Match.Moves, mov)
+
+		return w.Server.storage.StoreGame(w.GameID, g)
+	})
 }

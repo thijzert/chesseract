@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 
+	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/game"
 )
 
@@ -40,6 +41,9 @@ type Provider interface {
 
 	// Game returns the game object of the currently active game session, if applicable
 	Game() (*game.Game, error)
+
+	// SubmitMove appends a move to the currently active game
+	SubmitMove(chesseract.Move) error
 }
 
 var (

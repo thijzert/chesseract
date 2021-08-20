@@ -198,9 +198,11 @@ func (c *HttpClient) do(ctx context.Context, rv interface{}, method string, path
 		return ae
 	}
 
-	err = json.Unmarshal(body, rv)
-	if err != nil {
-		return errors.Wrap(err, "error decoding response")
+	if rv != nil {
+		err = json.Unmarshal(body, rv)
+		if err != nil {
+			return errors.Wrap(err, "error decoding response")
+		}
 	}
 
 	return nil
@@ -320,8 +322,12 @@ func (s *httpSession) PlayingAs() chesseract.Colour {
 }
 
 // SubmitMove submits a move by this player.
-func (s *httpSession) SubmitMove(context.Context, chesseract.Move) error {
-	return notimplemented.Error()
+func (s *httpSession) SubmitMove(ctx context.Context, mov chesseract.Move) error {
+	req := web.MoveRequest{
+		From: mov.From.String(),
+		To:   mov.To.String(),
+	}
+	return s.post(ctx, nil, "/api/game/move", nil, req)
 }
 
 // NextMove waits until a move occurs, and returns it. This comprises moves
@@ -330,11 +336,19 @@ func (s *httpSession) SubmitMove(context.Context, chesseract.Move) error {
 func (s *httpSession) NextMove(ctx context.Context) (chesseract.Move, error) {
 	v := url.Values{}
 	v.Set("nextindex", fmt.Sprintf("%d", len(s.game.Match.Moves)))
-	var rv web.NextMoveResponse
+
+	var rv struct {
+		Move struct {
+			PieceType chesseract.PieceType `json:"type"`
+			From      string               `json:"from"`
+			To        string               `json:"to"`
+			Time      string               `json:"time,omitempty"`
+		}
+	}
 
 	first := true
 
-	for rv.Move == nil {
+	for ctx.Err() == nil && rv.Move.From == "" && rv.Move.To == "" {
 		err := s.get(ctx, &rv, "/api/game/next-move", v)
 		if err != nil {
 			return chesseract.Move{}, err
@@ -345,7 +359,36 @@ func (s *httpSession) NextMove(ctx context.Context) (chesseract.Move, error) {
 		first = false
 	}
 
-	return *rv.Move, nil
+	err := ctx.Err()
+	if err != nil {
+		return chesseract.Move{}, err
+	}
+
+	rs := s.game.Match.RuleSet
+	mov := chesseract.Move{
+		PieceType: rv.Move.PieceType,
+	}
+	mov.From, err = rs.ParsePosition(rv.Move.From)
+	if err != nil {
+		return chesseract.Move{}, nil
+	}
+	mov.To, err = rs.ParsePosition(rv.Move.To)
+	if err != nil {
+		return chesseract.Move{}, nil
+	}
+
+	mov.Time, _ = time.ParseDuration(rv.Move.Time)
+
+	// Interface rules: we need to apply this to the internal game object
+	newb, err := rs.ApplyMove(s.game.Match.Board, mov)
+	if err != nil {
+		return chesseract.Move{}, client.ErrIllegalMove
+	}
+
+	s.game.Match.Board = newb
+	s.game.Match.Moves = append(s.game.Match.Moves, mov)
+
+	return mov, nil
 }
 
 // ProposeResult submits a possible final outcome for this game, which all

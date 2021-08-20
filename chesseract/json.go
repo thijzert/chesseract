@@ -39,6 +39,16 @@ type moveJsonProxy struct {
 	Time      string            `json:"time,omitempty"`
 }
 
+func (m Move) MarshalJSON() ([]byte, error) {
+	proxy := moveJsonProxy{
+		PieceType: m.PieceType,
+		From:      positionJsonProxy(m.From.String()),
+		To:        positionJsonProxy(m.To.String()),
+		Time:      m.Time.String(),
+	}
+	return json.Marshal(proxy)
+}
+
 func (m Match) MarshalJSON() ([]byte, error) {
 	proxy := matchJsonProxy{
 		RuleSet: m.RuleSet.String(),
