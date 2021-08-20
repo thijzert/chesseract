@@ -49,7 +49,7 @@ func consoleGame(conf *Config, args []string) error {
 	if err != nil {
 		return err
 	}
-	cc := newConsoleClient(g, chesseract.BLACK)
+	cc := newConsoleClient(g)
 
 	return cc.Run(ctx)
 }
@@ -67,19 +67,19 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 
 	s := New1v1()
 
-	var run = func(c client.Client, col chesseract.Colour) {
+	var run = func(c client.Client) {
 		g, err := c.NewGame(ctx, players)
 		if err != nil {
 			errs <- err
 			return
 		}
 
-		cc := newConsoleClient(g, col)
+		cc := newConsoleClient(g)
 		errs <- cc.Run(ctx)
 	}
 
-	go run(s.B, chesseract.BLACK)
-	go run(s.W, chesseract.WHITE)
+	go run(s.B)
+	go run(s.W)
 
 	var rv error
 
@@ -96,20 +96,19 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 
 type consoleClient struct {
 	Session client.GameSession
-	PlayAs  chesseract.Colour
 }
 
-func newConsoleClient(sesh client.GameSession, playAs chesseract.Colour) consoleClient {
+func newConsoleClient(sesh client.GameSession) consoleClient {
 	return consoleClient{
 		Session: sesh,
-		PlayAs:  playAs,
 	}
 }
 
 func (cc consoleClient) Run(ctx context.Context) error {
+	playingAs := cc.Session.PlayingAs()
 	g := cc.Session.Game()
 	for ctx.Err() == nil {
-		for g.Match.Board.Turn != cc.PlayAs {
+		for g.Match.Board.Turn != playingAs {
 			_, err := cc.Session.NextMove(ctx)
 			if err != nil {
 				return err
@@ -124,7 +123,7 @@ func (cc consoleClient) Run(ctx context.Context) error {
 
 		for {
 			consoleMutex.Lock()
-			fmt.Printf("Enter move for %6s: ", cc.PlayAs)
+			fmt.Printf("Enter move for %6s: ", playingAs)
 
 			var sFrom, sTo string
 			n, _ := fmt.Scanf("%s %s\n", &sFrom, &sTo)
@@ -164,7 +163,11 @@ func (cc consoleClient) Run(ctx context.Context) error {
 			break
 		}
 
-		cc.Session.SubmitMove(ctx, move)
+		err := cc.Session.SubmitMove(ctx, move)
+		if err != nil {
+			return err
+		}
+
 		type moveErr struct {
 			Move chesseract.Move
 			Err  error

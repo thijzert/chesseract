@@ -19,7 +19,6 @@ import (
 	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/game"
 	"github.com/thijzert/chesseract/internal/notimplemented"
-	"github.com/thijzert/chesseract/internal/storage"
 	"github.com/thijzert/chesseract/web"
 	http2curl "moul.io/http2curl/v2"
 )
@@ -49,9 +48,9 @@ type HttpClient struct {
 
 	sessionToken string
 
-	requestLogger *log.Logger
+	myProfile game.Player
 
-	gameIDs map[*game.Game]storage.GameID
+	requestLogger *log.Logger
 }
 
 func New(ctx context.Context, c ClientConfig) (*HttpClient, error) {
@@ -70,8 +69,6 @@ func New(ctx context.Context, c ClientConfig) (*HttpClient, error) {
 		},
 
 		baseURI: c.ServerURI,
-
-		gameIDs: make(map[*game.Game]storage.GameID),
 	}
 
 	if c.VerboseRequestLogging != nil {
@@ -108,6 +105,14 @@ func New(ctx context.Context, c ClientConfig) (*HttpClient, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error authenticating")
 	}
+
+	var profileResult web.WhoAmIResponse
+	err = rv.get(ctx, &profileResult, "/api/session/me", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "error asking who I am")
+	}
+
+	rv.myProfile = profileResult.Profile
 
 	return rv, nil
 }
@@ -163,6 +168,8 @@ func (c *HttpClient) do(ctx context.Context, rv interface{}, method string, path
 		req.Body = io.NopCloser(bytes.NewReader(encodedBody))
 	}
 
+	req.Header.Set("User-Agent", fmt.Sprintf("Chesseract/%s +https://github.com/thijzert/chesseract", chesseract.PackageVersion))
+
 	t0 := time.Now()
 
 	resp, err := c.client.Do(req)
@@ -201,7 +208,8 @@ func (c *HttpClient) do(ctx context.Context, rv interface{}, method string, path
 
 // Me returns the object that represents the player at the server's end
 func (c *HttpClient) Me() (game.Player, error) {
-	return game.Player{}, notimplemented.Error()
+	// FIXME: Ideally we'd refresh this every so often.
+	return c.myProfile, nil
 }
 
 // AvailablePlayers returns the list of players available for a match
@@ -223,22 +231,44 @@ func (c *HttpClient) NewGame(ctx context.Context, players []game.Player) (client
 		return nil, errors.Wrap(err, "error starting new game")
 	}
 
-	rv := &httpSession{
-		Client: c,
-		GameID: gameid.GameID,
-		game:   gameid.Game,
+	return c.sessionFromID(ctx, gameid.GameID)
+}
+
+// sessionFromID creates a GameSession from a game ID
+func (c *HttpClient) sessionFromID(ctx context.Context, gameid string) (client.GameSession, error) {
+	idparam := url.Values{}
+	idparam.Set("gameid", gameid)
+	var gameobj web.GetGameResponse
+	err := c.get(ctx, &gameobj, "/api/game", idparam)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating game session")
 	}
 
-	// TODO: Query the server to see if any moves were already saved
-	// TODO: Apply those locally
+	player, err := c.Me()
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating game session")
+	}
+
+	rv := &httpSession{
+		Client: c,
+		GameID: gameid,
+		game:   gameobj.Game,
+	}
+
+	for _, gpl := range gameobj.Game.Players {
+		if gpl.Name == player.Name && gpl.Realm == player.Realm {
+			rv.playingAs = gpl.PlayingAs
+		}
+	}
 
 	return rv, nil
 }
 
 type httpSession struct {
-	Client *HttpClient
-	GameID string
-	game   *game.Game
+	Client    *HttpClient
+	GameID    string
+	game      *game.Game
+	playingAs chesseract.Colour
 }
 
 func (s *httpSession) get(ctx context.Context, rv interface{}, path string, params url.Values) error {
@@ -262,6 +292,10 @@ func (s *httpSession) post(ctx context.Context, rv interface{}, path string, par
 // Game returns the Game object of this session
 func (s *httpSession) Game() *game.Game {
 	return s.game
+}
+
+func (s *httpSession) PlayingAs() chesseract.Colour {
+	return s.playingAs
 }
 
 // SubmitMove submits a move by this player.

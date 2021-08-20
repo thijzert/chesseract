@@ -24,6 +24,9 @@ type GameSession interface {
 	// Game returns the Game object of this session
 	Game() *game.Game
 
+	// PlayingAs returns the colour of the pieces that represent this player
+	PlayingAs() chesseract.Colour
+
 	// SubmitMove submits a move by this player.
 	SubmitMove(context.Context, chesseract.Move) error
 

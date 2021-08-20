@@ -66,6 +66,7 @@ func New(config ServerConfig) (*Server, error) {
 	s.mux.Handle("/api/session/new", s.JSONFunc(web.NewSessionHandler))
 	s.mux.Handle("/api/session/auth/response", s.JSONFunc(web.AuthResponseHandler))
 	s.mux.Handle("/api/session/auth", s.JSONFunc(web.AuthChallengeHandler))
+	s.mux.Handle("/api/session/me", s.JSONFunc(web.WhoAmIHandler))
 
 	s.mux.Handle("/api/game/new", s.JSONFunc(web.NewGameHandler))
 	s.mux.Handle("/api/game/next-move", s.JSONFunc(web.NextMoveHandler))
@@ -108,9 +109,10 @@ func (s *Server) getProvider(r *http.Request) (web.Provider, storage.SessionID) 
 	if auth := r.Header.Get("Authorisation"); len(auth) > 10 {
 		ns, err := storage.ParseSessionID(auth[7:])
 		if err == nil {
-			_, err := s.storage.GetSession(ns)
+			sesh, err := s.storage.GetSession(ns)
 			if err == nil {
 				rv.SessionID = ns
+				rv.PlayerID = sesh.PlayerID
 			} else {
 				// Maybe differentiate between the session not existing and a generic database error
 			}
@@ -136,6 +138,7 @@ type webProvider struct {
 	Server    *Server
 	Context   context.Context
 	SessionID storage.SessionID
+	PlayerID  storage.PlayerID
 	GameID    storage.GameID
 }
 
@@ -151,7 +154,10 @@ func (w webProvider) NewSession() (string, error) {
 
 // Player returns the player associated with this session
 func (w webProvider) Player() (game.Player, error) {
-	return game.Player{}, notimplemented.Error()
+	if w.PlayerID.IsEmpty() {
+		return game.Player{}, errNoPlayer
+	}
+	return w.Server.storage.GetPlayer(w.PlayerID)
 }
 
 // SetPlayer assigns this player to this session

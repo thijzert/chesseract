@@ -176,6 +176,10 @@ func (o *oneVoneClient) Game() *game.Game {
 	return o.game
 }
 
+func (o *oneVoneClient) PlayingAs() chesseract.Colour {
+	return o.colour
+}
+
 // SubmitMove submits a move by this player.
 func (o *oneVoneClient) SubmitMove(ctx context.Context, move chesseract.Move) error {
 	return o.server.SubmitMove(o, o.game, move)
