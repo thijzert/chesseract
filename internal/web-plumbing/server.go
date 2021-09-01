@@ -352,6 +352,10 @@ func (w webProvider) SubmitMove(mov chesseract.Move) error {
 			return err
 		}
 
+		if piece, ok := g.Match.Board.At(mov.From); ok {
+			mov.PieceType = piece.PieceType
+		}
+
 		newb, err := g.Match.RuleSet.ApplyMove(g.Match.Board, mov)
 		if err != nil {
 			return client.ErrIllegalMove
