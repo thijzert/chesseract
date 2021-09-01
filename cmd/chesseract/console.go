@@ -60,7 +60,10 @@ func consoleGame(conf *Config, args []string) error {
 		}
 	}
 
-	cc := newConsoleClient(g)
+	cc := consoleClient{
+		Session:    g,
+		Chattiness: OMG_SHUT_UP,
+	}
 
 	return cc.Run(ctx)
 }
@@ -85,7 +88,9 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 			return
 		}
 
-		cc := newConsoleClient(g)
+		cc := consoleClient{
+			Session: g,
+		}
 		errs <- cc.Run(ctx)
 	}
 
@@ -105,14 +110,16 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 	return rv
 }
 
-type consoleClient struct {
-	Session client.GameSession
-}
+type chattiness int
 
-func newConsoleClient(sesh client.GameSession) consoleClient {
-	return consoleClient{
-		Session: sesh,
-	}
+const (
+	NOT_TOO_CHATTY chattiness = iota
+	OMG_SHUT_UP
+)
+
+type consoleClient struct {
+	Session    client.GameSession
+	Chattiness chattiness
 }
 
 func (cc consoleClient) Run(ctx context.Context) error {
@@ -200,6 +207,12 @@ func (cc consoleClient) Run(ctx context.Context) error {
 			}
 			if !mv.Move.From.Equals(move.From) || !mv.Move.To.Equals(move.To) {
 				return client.ErrShenanigans
+			}
+
+			if cc.Chattiness == OMG_SHUT_UP {
+				consoleMutex.Lock()
+				g.Match.DebugDump(os.Stdout, nil)
+				consoleMutex.Unlock()
 			}
 		}
 	}
