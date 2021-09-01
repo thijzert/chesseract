@@ -325,6 +325,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 		})
 	}
 
+	g.Match.StartTime = time.Now()
 	g.Match.Board = g.Match.RuleSet.DefaultBoard()
 
 	err = w.Server.storage.StoreGame(id, g)
