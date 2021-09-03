@@ -19,7 +19,6 @@ import (
 func glGame(conf *Config, args []string) error {
 	fmt.Printf("Hello from version '%s'\n", engine.PackageVersion)
 
-	// The actions didn't run because the Go compilation only runs when you change at least one Go file, you dummy.
 	var autoquit int64
 
 	rc := engine.DefaultConfig()
