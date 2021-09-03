@@ -13,6 +13,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - run: sudo apt-get update
+    - run: sudo apt-get -y install build-essential libx11-dev libgl1-mesa-dev xorg-dev
+
     - uses: actions/checkout@v2
 
     - name: Determine version
@@ -23,11 +26,6 @@ jobs:
         exclude: '*-rc*'
         commit-ish: 'HEAD'
         abbrev: 7
-
-    - name: Set up dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install build-essential libx11-dev libgl1-mesa-dev xorg-dev
 
     - name: Set up Go
       uses: actions/setup-go@v2
