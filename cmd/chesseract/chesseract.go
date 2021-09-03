@@ -46,6 +46,8 @@ func main() {
 		err = apiServer(&conf, args)
 	} else if command == "client" {
 		err = consoleGame(&conf, args)
+	} else if command == "glclient" {
+		err = glGame(&conf, args)
 	}
 
 	er = saveConfig(conf, configLocation)
