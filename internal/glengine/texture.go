@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -16,12 +17,13 @@ import (
 type texture uint32
 
 type material struct {
-	Texture      texture
-	NormalMap    texture
-	SpecularMap  texture
-	ShineDamper  float32
-	Reflectivity float32
-	Transparency bool
+	Texture      texture `json:"-"`
+	NormalMap    texture `json:"-"`
+	SpecularMap  texture `json:"-"`
+	TileSize     [2]int  `json:"tile_size,omitempty"`
+	ShineDamper  float32 `json:"shine_damper,omitempty"`
+	Reflectivity float32 `json:"reflectivity,omitempty"`
+	Transparency bool    `json:"transparency,omitempty"`
 }
 
 var identityTextures [3]*image.RGBA
@@ -49,6 +51,18 @@ func init() {
 func (eng *Engine) loadMaterialAsset(name string) material {
 	var rv material
 	var err error
+
+	meta, err := assets.GetAsset("textures/" + name + ".json")
+	if err == nil {
+		json.Unmarshal(meta, &rv)
+	}
+
+	if rv.TileSize[0] < 1 {
+		rv.TileSize[0] = 1
+	}
+	if rv.TileSize[1] < 1 {
+		rv.TileSize[1] = 1
+	}
 
 	rv.Texture, err = eng.loadTexture(name + ".diffuse.jpeg")
 	if err != nil {

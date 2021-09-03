@@ -8,6 +8,8 @@ in vec3 to_camera;
 
 uniform float materialShineDamper;
 uniform float materialReflectivity;
+uniform vec2 tileSize;
+uniform float tileIndex;
 
 uniform sampler2D diffuseTexture;
 uniform sampler2D normalMap;
@@ -26,7 +28,10 @@ void main() {
 	vec3 tangent_n = normalize(pass_tangent - (pass_tangent * dot(pass_tangent, unit_normal)));
 	vec3 bitangent = cross(unit_normal, tangent_n);
 
-	vec4 diffuse_here  = texture(diffuseTexture, pass_uv);
+	vec2 tile_offset = vec2(mod(tileIndex,tileSize.x) / tileSize.x, ((tileIndex - mod(tileIndex,tileSize.x)) / tileSize.y));
+	vec2 tile_uv = tile_offset + (pass_uv / tileSize);
+
+	vec4 diffuse_here  = texture(diffuseTexture, tile_uv);
 	vec4 normal_here   = texture(normalMap, pass_uv);
 	vec4 specular_here = texture(specularMap, pass_uv);
 
@@ -34,6 +39,7 @@ void main() {
 
 	float light = max(dot(unit_to_light, effective_normal), 0.0);
 	light = 0.15 + 0.85*light;
+	light = 0.35 + 0.65*light;
 	vec4 diffuse_colour = vec4(lightColour * light,1.0) * diffuse_here;
 
 	vec3 reflected_light = reflect(-unit_to_light, effective_normal);

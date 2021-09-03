@@ -10,6 +10,7 @@ import (
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/thijzert/chesseract/chesseract"
 )
 
 var PackageVersion string
@@ -115,6 +116,10 @@ func (eng *Engine) Run() error {
 		"queen",
 		"king",
 	}
+	colours := []chesseract.Colour{
+		chesseract.BLACK,
+		chesseract.WHITE,
+	}
 
 	for i, name := range chessSet {
 		pawn, err := eng.models.LoadModelAsset(name)
@@ -124,11 +129,16 @@ func (eng *Engine) Run() error {
 		pawn.Material = eng.loadMaterialAsset(name)
 
 		x := 1 * (float32(i) - 0.5*float32(len(chessSet)))
-		eng.entities = append(eng.entities, entity{
-			model:    pawn,
-			position: mgl32.Vec3{x, -2, -5},
-			scale:    mgl32.Vec3{1, 1, 1},
-		})
+
+		for j := range colours {
+			z := -1 * (5 + float32(j))
+			eng.entities = append(eng.entities, entity{
+				model:     pawn,
+				position:  mgl32.Vec3{x, -2, z},
+				scale:     mgl32.Vec3{1, 1, 1},
+				tileIndex: j,
+			})
+		}
 	}
 
 	eng.projectionMatrix = mgl32.Perspective(mgl32.DegToRad(70), float32(eng.runConfig.WindowWidth)/float32(eng.runConfig.WindowHeight), 0.1, 1000)
@@ -155,12 +165,9 @@ func (eng *Engine) Run() error {
 }
 
 func (eng *Engine) updatePhysics() {
-	eng.entities[1].position[0] -= 0.002
-	eng.entities[1].rotation[2] += 0.1
-	eng.entities[0].position[0] += 0.005
-	eng.entities[0].position[2] -= 0.01
-	eng.entities[0].rotation[1] += 0.1
-	eng.entities[2].rotation[1] -= 0.05
+	for i := range eng.entities {
+		eng.entities[i].rotation[1] -= 0.05
+	}
 
 	if eng.window.GetKey(glfw.KeyW) == glfw.Press {
 		eng.camera.position[2] -= 0.2
@@ -173,6 +180,12 @@ func (eng *Engine) updatePhysics() {
 	}
 	if eng.window.GetKey(glfw.KeyD) == glfw.Press {
 		eng.camera.position[0] += 0.2
+	}
+	if eng.window.GetKey(glfw.KeyZ) == glfw.Press {
+		eng.camera.position[1] -= 0.2
+	}
+	if eng.window.GetKey(glfw.KeyX) == glfw.Press {
+		eng.camera.position[1] += 0.2
 	}
 }
 
@@ -261,10 +274,12 @@ func (eng *Engine) drawEntity(e entity, program glProgram) {
 
 	program.UniformFloat(U_MATERIAL_SHINE_DAMPER, e.model.Material.ShineDamper)
 	program.UniformFloat(U_MATERIAL_REFLECTIVITY, e.model.Material.Reflectivity)
+	program.UniformVec2(U_TILE_SIZE, float32(e.model.Material.TileSize[0]), float32(e.model.Material.TileSize[1]))
 
 	program.UniformMatrix4(U_PROJECTION, eng.projectionMatrix)
 	program.UniformMatrix4(U_CAMERA, eng.getCameraMatrix())
 	program.UniformMatrix4(U_TRANSFORM, e.getTransformation())
+	program.UniformFloat(U_TILE_INDEX, float32(e.tileIndex))
 
 	program.UniformVec3(U_TMP_LIGHT_POS, eng.light.position)
 	program.UniformVec3(U_TMP_LIGHT_COLOUR, eng.light.colour)

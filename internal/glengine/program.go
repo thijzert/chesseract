@@ -20,6 +20,8 @@ const (
 	U_TEXTURE_DIFFUSE
 	U_TEXTURE_NORMAL
 	U_TEXTURE_SPECULAR
+	U_TILE_SIZE
+	U_TILE_INDEX
 	U_TMP_LIGHT_POS
 	U_TMP_LIGHT_COLOUR
 	// ...
@@ -43,6 +45,10 @@ func (u Uniform) String() string {
 		return "normalMap"
 	} else if u == U_TEXTURE_SPECULAR {
 		return "specularMap"
+	} else if u == U_TILE_SIZE {
+		return "tileSize"
+	} else if u == U_TILE_INDEX {
+		return "tileIndex"
 	} else if u == U_TMP_LIGHT_POS {
 		return "lightPosition"
 	} else if u == U_TMP_LIGHT_COLOUR {
@@ -97,6 +103,15 @@ func (p glProgram) UniformFloat(attribute Uniform, value float32) {
 	gl.Uniform1f(location, value)
 }
 
+func (p glProgram) UniformVec2(attribute Uniform, u, v float32) {
+	location := p.uniformLocations[attribute]
+	if location == -1 {
+		return
+	}
+
+	gl.Uniform2f(location, u, v)
+}
+
 func (p glProgram) UniformVec3(attribute Uniform, value mgl32.Vec3) {
 	location := p.uniformLocations[attribute]
 	if location == -1 {
@@ -141,6 +156,8 @@ func (eng *Engine) linkProgram(shaders ...glShader) (glProgram, error) {
 	if err != nil {
 		return rv, fmt.Errorf("error linking program: %v", err)
 	}
+
+	// TODO: re-enable validating programs, but after a model has been loaded
 
 	// gl.ValidateProgram(prog)
 	// err = eng.getProgramError(prog, gl.VALIDATE_STATUS)

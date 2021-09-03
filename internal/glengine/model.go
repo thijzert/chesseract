@@ -223,10 +223,11 @@ func (m *modelManager) LoadModelAsset(name string) (rawModel, error) {
 }
 
 type entity struct {
-	model    rawModel
-	position mgl32.Vec3
-	rotation mgl32.Vec3
-	scale    mgl32.Vec3
+	model     rawModel
+	position  mgl32.Vec3
+	rotation  mgl32.Vec3
+	scale     mgl32.Vec3
+	tileIndex int
 }
 
 func (e entity) getTransformation() mgl32.Mat4 {
