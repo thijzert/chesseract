@@ -10,17 +10,15 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up dependencies
+    - name: Install required headers
       run: |
         sudo apt-get update
-        sudo apt-get install build-essential libx11-dev libgl1-mesa-dev
+        sudo apt-get -y install build-essential libx11-dev libgl1-mesa-dev xorg-dev
+
+    - uses: actions/checkout@v2
 
     - name: Set up Go
       uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
 
     - name: Compile all artefacts
       env:
