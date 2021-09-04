@@ -207,27 +207,16 @@ func (cc glClient) Run(ctx context.Context) error {
 
 func (cc glClient) RenderBoard() {
 	cc.RenderingEngine.ClearEntities()
-
-	modelNames := map[chesseract.PieceType]string{
-		chesseract.PAWN:   "pawn",
-		chesseract.ROOK:   "rook",
-		chesseract.KNIGHT: "knight",
-		chesseract.BISHOP: "bishop",
-		chesseract.QUEEN:  "queen",
-		chesseract.KING:   "king",
-	}
-
-	idxMap := map[chesseract.Colour]int{
-		chesseract.WHITE: 0,
-		chesseract.BLACK: 1,
-	}
+	rs := cc.Session.Game().Match.RuleSet
 
 	for i, piece := range cc.Session.Game().Match.Board.Pieces {
-		name, ok := modelNames[piece.PieceType]
+		name, tileIdx, ok := resolveModel(piece)
+		if mr, isMR := rs.(ModelResolver); isMR {
+			name, tileIdx, ok = mr.ResolveModel(piece)
+		}
 		if !ok {
 			continue
 		}
-		tileIdx := idxMap[piece.Colour]
 		position := mgl32.Vec3{float32(i), -2, -6}
 
 		if pos, ok := piece.Position.(Positioner); ok {
@@ -246,6 +235,30 @@ func (cc glClient) RenderBoard() {
 	cc.RenderingEngine.SwapEntities()
 }
 
+func resolveModel(piece chesseract.Piece) (modelName string, tileIdx int, ok bool) {
+	modelNames := map[chesseract.PieceType]string{
+		chesseract.PAWN:   "pawn",
+		chesseract.ROOK:   "rook",
+		chesseract.KNIGHT: "knight",
+		chesseract.BISHOP: "bishop",
+		chesseract.QUEEN:  "queen",
+		chesseract.KING:   "king",
+	}
+
+	idxMap := map[chesseract.Colour]int{
+		chesseract.WHITE: 0,
+		chesseract.BLACK: 1,
+	}
+
+	modelName, ok = modelNames[piece.PieceType]
+	tileIdx = idxMap[piece.Colour]
+	return
+}
+
 type Positioner interface {
 	WorldPosition() (float32, float32, float32)
+}
+
+type ModelResolver interface {
+	ResolveModel(piece chesseract.Piece) (modelName string, tileIdx int, ok bool)
 }
