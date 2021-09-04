@@ -208,34 +208,44 @@ func (cc glClient) Run(ctx context.Context) error {
 func (cc glClient) RenderBoard() {
 	cc.RenderingEngine.ClearEntities()
 
-	chessSet := []string{
-		"pawn",
-		"rook",
-		"knight",
-		"bishop",
-		"queen",
-		"king",
-	}
-	colours := []chesseract.Colour{
-		chesseract.BLACK,
-		chesseract.WHITE,
+	modelNames := map[chesseract.PieceType]string{
+		chesseract.PAWN:   "pawn",
+		chesseract.ROOK:   "rook",
+		chesseract.KNIGHT: "knight",
+		chesseract.BISHOP: "bishop",
+		chesseract.QUEEN:  "queen",
+		chesseract.KING:   "king",
 	}
 
-	for i, name := range chessSet {
+	idxMap := map[chesseract.Colour]int{
+		chesseract.WHITE: 0,
+		chesseract.BLACK: 1,
+	}
 
-		x := 1 * (float32(i) - 0.5*float32(len(chessSet)))
-
-		for j := range colours {
-			z := -1 * (5 + float32(j))
-
-			cc.RenderingEngine.Entities = append(cc.RenderingEngine.Entities, engine.Entity{
-				ModelName: name,
-				Position:  mgl32.Vec3{x, -2, z},
-				Scale:     mgl32.Vec3{1, 1, 1},
-				TileIndex: j,
-			})
+	for i, piece := range cc.Session.Game().Match.Board.Pieces {
+		name, ok := modelNames[piece.PieceType]
+		if !ok {
+			continue
 		}
+		tileIdx := idxMap[piece.Colour]
+		position := mgl32.Vec3{float32(i), -2, -6}
+
+		if pos, ok := piece.Position.(Positioner); ok {
+			x, y, z := pos.WorldPosition()
+			position = mgl32.Vec3{x, y, z}
+		}
+
+		cc.RenderingEngine.Entities = append(cc.RenderingEngine.Entities, engine.Entity{
+			ModelName: name,
+			Position:  position,
+			Scale:     mgl32.Vec3{1, 1, 1},
+			TileIndex: tileIdx,
+		})
 	}
 
 	cc.RenderingEngine.SwapEntities()
+}
+
+type Positioner interface {
+	WorldPosition() (float32, float32, float32)
 }

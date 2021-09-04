@@ -30,6 +30,13 @@ func (p position2D) CellColour() Colour {
 	}
 }
 
+func (p position2D) WorldPosition() (x, y, z float32) {
+	y = 0.0
+	x = float32(p[0]) - 3.5
+	z = float32(p[1]) - 3.5
+	return
+}
+
 // The Boring2D type implements the old 2D 8x8 board we're so used to by now
 type Boring2D struct{}
 
