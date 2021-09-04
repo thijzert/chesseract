@@ -4,13 +4,13 @@ import (
 	"context"
 	"io"
 	"log"
+	"sync"
 
 	"runtime"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
-	"github.com/thijzert/chesseract/chesseract"
 )
 
 var PackageVersion string
@@ -69,8 +69,13 @@ type Engine struct {
 		position      mgl32.Vec3
 		viewDirection mgl32.Vec3
 	}
-	entities []entity
-	light    pointLight
+	mu              sync.Mutex
+	currentEntities []rawEntity
+	nextEntities    []Entity
+	entitiesDirty   bool
+	Entities        []Entity
+	loadedModels    map[string]rawModel
+	light           pointLight
 }
 
 func (eng *Engine) log(format string, items ...interface{}) {
@@ -108,47 +113,23 @@ func (eng *Engine) Run() error {
 	}
 	eng.GUI.Quad = eng.models.DefaultQuad()
 
-	chessSet := []string{
-		"pawn",
-		"rook",
-		"knight",
-		"bishop",
-		"queen",
-		"king",
-	}
-	colours := []chesseract.Colour{
-		chesseract.BLACK,
-		chesseract.WHITE,
-	}
-
-	for i, name := range chessSet {
-		pawn, err := eng.models.LoadModelAsset(name)
-		if err != nil {
-			return err
-		}
-		pawn.Material = eng.loadMaterialAsset(name)
-
-		x := 1 * (float32(i) - 0.5*float32(len(chessSet)))
-
-		for j := range colours {
-			z := -1 * (5 + float32(j))
-			eng.entities = append(eng.entities, entity{
-				model:     pawn,
-				position:  mgl32.Vec3{x, -2, z},
-				scale:     mgl32.Vec3{1, 1, 1},
-				tileIndex: j,
-			})
-		}
-	}
-
 	eng.projectionMatrix = mgl32.Perspective(mgl32.DegToRad(70), float32(eng.runConfig.WindowWidth)/float32(eng.runConfig.WindowHeight), 0.1, 1000)
 
 	for !eng.window.ShouldClose() && eng.ctx.Err() == nil {
 		eng.prepareDisplay()
 
-		for _, e := range eng.entities {
+		err := eng.updateEntities()
+		if err != nil {
+			// TODO: figure out if we can handle this gracefully
+			//       (e.g. just not load that particular model)
+			return err
+		}
+
+		eng.mu.Lock()
+		for _, e := range eng.currentEntities {
 			eng.drawEntity(e, program)
 		}
+		eng.mu.Unlock()
 
 		eng.GUI.DrawGUI()
 
@@ -164,9 +145,69 @@ func (eng *Engine) Run() error {
 	return eng.ctx.Err()
 }
 
+func (eng *Engine) ClearEntities() {
+	eng.Entities = eng.Entities[:0]
+}
+
+func (eng *Engine) SwapEntities() {
+	eng.mu.Lock()
+	defer eng.mu.Unlock()
+
+	eng.nextEntities = eng.nextEntities[:0]
+	eng.nextEntities = append(eng.nextEntities, eng.Entities...)
+
+	eng.entitiesDirty = true
+}
+
+func (eng *Engine) updateEntities() error {
+	if !eng.entitiesDirty {
+		return nil
+	}
+
+	eng.mu.Lock()
+	defer eng.mu.Unlock()
+
+	// Load all models into the cache
+	if eng.loadedModels == nil {
+		eng.loadedModels = make(map[string]rawModel)
+	}
+	for _, ent := range eng.nextEntities {
+		if _, ok := eng.loadedModels[ent.ModelName]; !ok {
+			model, err := eng.models.LoadModelAsset(ent.ModelName)
+			if err != nil {
+				return err
+			}
+			model.Material = eng.loadMaterialAsset(ent.ModelName)
+
+			eng.loadedModels[ent.ModelName] = model
+		}
+	}
+
+	// Clear the currentEntities list and fill it without reallocating every time
+	eng.currentEntities = eng.currentEntities[:0]
+	for _, ent := range eng.nextEntities {
+		model := eng.loadedModels[ent.ModelName]
+		entity := rawEntity{
+			model:     model,
+			position:  ent.Position,
+			rotation:  ent.Rotation,
+			scale:     ent.Scale,
+			tileIndex: ent.TileIndex,
+		}
+		eng.currentEntities = append(eng.currentEntities, entity)
+	}
+
+	eng.entitiesDirty = false
+
+	return nil
+}
+
 func (eng *Engine) updatePhysics() {
-	for i := range eng.entities {
-		eng.entities[i].rotation[1] -= 0.05
+	eng.mu.Lock()
+	defer eng.mu.Unlock()
+
+	for i := range eng.currentEntities {
+		eng.currentEntities[i].rotation[1] -= 0.05
 	}
 
 	if eng.window.GetKey(glfw.KeyW) == glfw.Press {
@@ -249,7 +290,7 @@ func (eng *Engine) updateDisplay(window *glfw.Window) error {
 	return nil
 }
 
-func (eng *Engine) drawEntity(e entity, program glProgram) {
+func (eng *Engine) drawEntity(e rawEntity, program glProgram) {
 	if e.model.Material.Transparency {
 		gl.Disable(gl.CULL_FACE)
 	} else {

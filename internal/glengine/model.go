@@ -222,7 +222,15 @@ func (m *modelManager) LoadModelAsset(name string) (rawModel, error) {
 	return m.LoadModel(vertices, uvmap, normals, tangents, indices), nil
 }
 
-type entity struct {
+type Entity struct {
+	ModelName string
+	Position  mgl32.Vec3
+	Rotation  mgl32.Vec3
+	Scale     mgl32.Vec3
+	TileIndex int
+}
+
+type rawEntity struct {
 	model     rawModel
 	position  mgl32.Vec3
 	rotation  mgl32.Vec3
@@ -230,7 +238,7 @@ type entity struct {
 	tileIndex int
 }
 
-func (e entity) getTransformation() mgl32.Mat4 {
+func (e rawEntity) getTransformation() mgl32.Mat4 {
 	rv := mgl32.Ident4()
 
 	rv = rv.Mul4(mgl32.Translate3D(e.position[0], e.position[1], e.position[2]))

@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-gl/mathgl/mgl32"
 	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/client/httpclient"
@@ -79,7 +80,8 @@ func glGame(conf *Config, args []string) error {
 			}
 
 			cc := glClient{
-				Session: g,
+				Session:         g,
+				RenderingEngine: eng,
 			}
 
 			return cc.Run(ctx)
@@ -107,7 +109,8 @@ const (
 )
 
 type glClient struct {
-	Session client.GameSession
+	Session         client.GameSession
+	RenderingEngine *engine.Engine
 }
 
 func (cc glClient) Run(ctx context.Context) error {
@@ -203,5 +206,36 @@ func (cc glClient) Run(ctx context.Context) error {
 }
 
 func (cc glClient) RenderBoard() {
-	cc.Session.Game().Match.DebugDump(os.Stdout, nil)
+	cc.RenderingEngine.ClearEntities()
+
+	chessSet := []string{
+		"pawn",
+		"rook",
+		"knight",
+		"bishop",
+		"queen",
+		"king",
+	}
+	colours := []chesseract.Colour{
+		chesseract.BLACK,
+		chesseract.WHITE,
+	}
+
+	for i, name := range chessSet {
+
+		x := 1 * (float32(i) - 0.5*float32(len(chessSet)))
+
+		for j := range colours {
+			z := -1 * (5 + float32(j))
+
+			cc.RenderingEngine.Entities = append(cc.RenderingEngine.Entities, engine.Entity{
+				ModelName: name,
+				Position:  mgl32.Vec3{x, -2, z},
+				Scale:     mgl32.Vec3{1, 1, 1},
+				TileIndex: j,
+			})
+		}
+	}
+
+	cc.RenderingEngine.SwapEntities()
 }
