@@ -44,7 +44,7 @@ void main() {
 
 	vec3 reflected_light = reflect(-unit_to_light, effective_normal);
 
-	float specularFactor = max(0.0, dot(reflected_light, to_camera));
+	float specularFactor = max(0.0, dot(reflected_light, unit_to_camera));
 	specularFactor = materialReflectivity * pow(specularFactor, materialShineDamper);
 
 	vec4 specular_light = vec4(lightColour,1.0) * specularFactor;

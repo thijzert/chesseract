@@ -80,6 +80,10 @@ func (m *GUIManager) DrawGUI() {
 	gl.BlendFunc(gl.BLEND_SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	for _, l := range m.layers {
+		if !l.enabled {
+			continue
+		}
+
 		m.assignTexture(&l)
 		gl.BindTexture(gl.TEXTURE_2D, uint32(l.texture))
 

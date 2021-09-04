@@ -26,5 +26,5 @@ void main() {
 	pass_tangent = (transformationMatrix * vec4(tangent,0.0)).xyz;
 
 	to_light = lightPosition - worldPosition.xyz;
-	to_camera = normalize((inverse(cameraMatrix) * vec4(0,0,0,1)).xyz - worldPosition.xyz);
+	to_camera = (inverse(cameraMatrix) * vec4(0,0,0,1)).xyz - worldPosition.xyz;
 }

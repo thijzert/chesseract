@@ -115,6 +115,8 @@ type glClient struct {
 }
 
 func (cc glClient) Run(ctx context.Context) error {
+	cc.RenderBoard()
+
 	playingAs := cc.Session.PlayingAs()
 	g := cc.Session.Game()
 	for ctx.Err() == nil {
