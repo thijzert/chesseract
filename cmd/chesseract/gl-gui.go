@@ -5,13 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/color"
-	"image/png"
 	"log"
 	"os"
 	"time"
 
+	"github.com/thijzert/chesseract/chesseract"
+	"github.com/thijzert/chesseract/chesseract/client"
 	"github.com/thijzert/chesseract/chesseract/client/httpclient"
+	"github.com/thijzert/chesseract/chesseract/game"
 	engine "github.com/thijzert/chesseract/internal/glengine"
 	"github.com/thijzert/chesseract/internal/gui"
 )
@@ -22,7 +23,7 @@ func glGame(conf *Config, args []string) error {
 	var autoquit int64
 
 	rc := engine.DefaultConfig()
-	rc.Logger = log.New(os.Stdout, "[life] ", log.Ltime|log.Lshortfile)
+	rc.Logger = log.New(os.Stdout, "[gl] ", log.Ltime|log.Lshortfile)
 
 	clientConf := httpclient.ClientConfig{}
 
@@ -51,23 +52,42 @@ func glGame(conf *Config, args []string) error {
 	}
 	eng.GUI.AddLayer(GUI_DEBUG, debg)
 
-	// Draw a few circles
-	red := color.RGBA{255, 0, 0, 255}
-	yellow := color.RGBA{192, 192, 64, 255}
-	for y := 0; y < debg.Pixels.Rect.Dy(); y++ {
-		for x := 0; x < debg.Pixels.Rect.Dx(); x++ {
-			xx, yy := x-120, y-120
-			if xx*xx+yy*yy <= 10000 {
-				debg.Pixels.SetRGBA(x, y, red)
+	go func() {
+		er := func() error {
+			var c client.Client
+			c, err = httpclient.New(ctx, clientConf)
+			if err != nil {
+				return err
 			}
-			xx, yy = x-1030, y-520
-			if xx*xx+yy*yy <= 6400 {
-				debg.Pixels.SetRGBA(x, y, yellow)
+
+			var g client.GameSession
+			ag, err := c.ActiveGames(ctx)
+			if err != nil {
+				return err
 			}
+
+			if len(ag) > 0 {
+				g = ag[0]
+			} else {
+				g, err = c.NewGame(ctx, []game.Player{
+					{Name: "alice"},
+					{Name: "bob"},
+				})
+				if err != nil {
+					return err
+				}
+			}
+
+			cc := glClient{
+				Session: g,
+			}
+
+			return cc.Run(ctx)
+		}()
+		if er != nil {
+			log.Print(er)
 		}
-	}
-	g, _ := os.Create("/tmp/debug-ui-out.png")
-	png.Encode(g, debg.Pixels)
+	}()
 
 	// FIXME: The shutdown needs to happen in the same OS thread as the engine itself.
 	//        Better to just defer the cleanup stage inside Run(). As a bonus, less nasty error wrangling below.
@@ -85,3 +105,103 @@ const (
 	GUI_MENU
 	GUI_ALERT
 )
+
+type glClient struct {
+	Session client.GameSession
+}
+
+func (cc glClient) Run(ctx context.Context) error {
+	playingAs := cc.Session.PlayingAs()
+	g := cc.Session.Game()
+	for ctx.Err() == nil {
+		if g.Match.Board.Turn != playingAs {
+			fmt.Printf("Waiting for opponent\n")
+		}
+		for g.Match.Board.Turn != playingAs {
+			_, err := cc.Session.NextMove(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
+		cc.RenderBoard()
+
+		var move chesseract.Move
+
+		for {
+			fmt.Printf("Enter move for %6s: ", playingAs)
+
+			var sFrom, sTo string
+			n, _ := fmt.Scanf("%s %s\n", &sFrom, &sTo)
+			if n == 0 {
+				continue
+			}
+			if n == 1 {
+				if sFrom == "forfeit" || sFrom == "quit" {
+					return fmt.Errorf("forfeiting is not implemented")
+				}
+			}
+
+			from, err := g.Match.RuleSet.ParsePosition(sFrom)
+			if err != nil {
+				fmt.Printf("error parsing '%s': %v\n", sFrom, err)
+				continue
+			}
+			piece, _ := g.Match.Board.At(from)
+			to, err := g.Match.RuleSet.ParsePosition(sTo)
+			if err != nil {
+				fmt.Printf("error parsing '%s': %v\n", sTo, err)
+				continue
+			}
+
+			move = chesseract.Move{
+				PieceType: piece.PieceType,
+				From:      from,
+				To:        to,
+			}
+			_, err = g.Match.RuleSet.ApplyMove(g.Match.Board, move)
+			if err != nil {
+				fmt.Printf("applying move '%s'-'%s': %v\n", sFrom, sTo, err)
+				continue
+			}
+
+			break
+		}
+
+		err := cc.Session.SubmitMove(ctx, move)
+		if err != nil {
+			return err
+		}
+
+		type moveErr struct {
+			Move chesseract.Move
+			Err  error
+		}
+		ch := make(chan moveErr)
+		go func() {
+			otherMove, err := cc.Session.NextMove(ctx)
+			ch <- moveErr{otherMove, err}
+			close(ch)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case mv := <-ch:
+			if mv.Err != nil {
+				return mv.Err
+				// TODO: Maybe the server just thinks this is illegal, and we should keep trying?
+			}
+			if !mv.Move.From.Equals(move.From) || !mv.Move.To.Equals(move.To) {
+				return client.ErrShenanigans
+			}
+
+			cc.RenderBoard()
+		}
+	}
+	return ctx.Err()
+}
+
+func (cc glClient) RenderBoard() {
+	cc.Session.Game().Match.DebugDump(os.Stdout, nil)
+}
