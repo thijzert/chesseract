@@ -210,10 +210,6 @@ func (eng *Engine) updatePhysics() {
 	eng.mu.Lock()
 	defer eng.mu.Unlock()
 
-	for i := range eng.currentEntities {
-		eng.currentEntities[i].rotation[1] -= 0.05
-	}
-
 	if eng.window.GetKey(glfw.KeyW) == glfw.Press {
 		eng.camera.pitch += 0.05
 	}

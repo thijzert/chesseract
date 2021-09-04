@@ -209,6 +209,24 @@ func (cc glClient) RenderBoard() {
 	cc.RenderingEngine.ClearEntities()
 	rs := cc.Session.Game().Match.RuleSet
 
+	// Render the board
+	for i, pos := range rs.AllPositions() {
+		position := getWorldPosition(pos, i)
+
+		idx := i % 8
+		if pos.CellColour() == chesseract.BLACK {
+			idx += 8
+		}
+
+		cc.RenderingEngine.Entities = append(cc.RenderingEngine.Entities, engine.Entity{
+			ModelName: "square",
+			Position:  position,
+			Scale:     mgl32.Vec3{1, 1, 1},
+			TileIndex: idx,
+		})
+	}
+
+	// Render all pieces
 	for i, piece := range cc.Session.Game().Match.Board.Pieces {
 		name, tileIdx, ok := resolveModel(piece)
 		if mr, isMR := rs.(ModelResolver); isMR {
@@ -217,12 +235,9 @@ func (cc glClient) RenderBoard() {
 		if !ok {
 			continue
 		}
-		position := mgl32.Vec3{float32(i), -2, -6}
+		position := getWorldPosition(piece.Position, i)
 
-		if pos, ok := piece.Position.(Positioner); ok {
-			x, y, z := pos.WorldPosition()
-			position = mgl32.Vec3{x, y, z}
-		}
+		// TODO: Make the chess pieces face each other
 
 		cc.RenderingEngine.Entities = append(cc.RenderingEngine.Entities, engine.Entity{
 			ModelName: name,
@@ -233,6 +248,19 @@ func (cc glClient) RenderBoard() {
 	}
 
 	cc.RenderingEngine.SwapEntities()
+}
+
+type Positioner interface {
+	WorldPosition() (float32, float32, float32)
+}
+
+func getWorldPosition(pos chesseract.Position, i int) mgl32.Vec3 {
+	if wpos, ok := pos.(Positioner); ok {
+		x, y, z := wpos.WorldPosition()
+		return mgl32.Vec3{x, y, z}
+	}
+
+	return mgl32.Vec3{float32(i), -2, -6}
 }
 
 func resolveModel(piece chesseract.Piece) (modelName string, tileIdx int, ok bool) {
@@ -253,10 +281,6 @@ func resolveModel(piece chesseract.Piece) (modelName string, tileIdx int, ok boo
 	modelName, ok = modelNames[piece.PieceType]
 	tileIdx = idxMap[piece.Colour]
 	return
-}
-
-type Positioner interface {
-	WorldPosition() (float32, float32, float32)
 }
 
 type ModelResolver interface {

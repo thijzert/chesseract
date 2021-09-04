@@ -28,7 +28,7 @@ void main() {
 	vec3 tangent_n = normalize(pass_tangent - (pass_tangent * dot(pass_tangent, unit_normal)));
 	vec3 bitangent = cross(unit_normal, tangent_n);
 
-	vec2 tile_offset = vec2(mod(tileIndex,tileSize.x) / tileSize.x, ((tileIndex - mod(tileIndex,tileSize.x)) / tileSize.y));
+	vec2 tile_offset = vec2(mod(tileIndex,tileSize.x) / tileSize.x, ((tileIndex - mod(tileIndex,tileSize.x)) / (tileSize.y*tileSize.y)));
 	vec2 tile_uv = tile_offset + (pass_uv / tileSize);
 
 	vec4 diffuse_here  = texture(diffuseTexture, tile_uv);
@@ -38,8 +38,8 @@ void main() {
 	vec3 effective_normal = (2*normal_here.b-1) * unit_normal + (2*normal_here.r-1) * tangent_n + (2*normal_here.g-1) * bitangent;
 
 	float light = max(dot(unit_to_light, effective_normal), 0.0);
-	light = 0.15 + 0.85*light;
-	light = 0.35 + 0.65*light;
+	// light = 0.15 + 0.85*light;
+	light = 0.5 + 0.5*light;
 	vec4 diffuse_colour = vec4(lightColour * light,1.0) * diffuse_here;
 
 	vec3 reflected_light = reflect(-unit_to_light, effective_normal);
