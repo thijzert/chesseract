@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"math"
 	"sync"
 
 	"runtime"
@@ -53,7 +54,9 @@ func (r RunConfig) NewEngine(ctx context.Context) *Engine {
 		GUI:       &GUIManager{},
 	}
 
-	eng.camera.viewDirection = mgl32.Vec3{0, 0, -1}
+	eng.camera.pitch = 0.5
+	eng.camera.yaw = -0.15
+	eng.camera.radius = 10
 
 	return &eng
 }
@@ -66,8 +69,9 @@ type Engine struct {
 	GUI              *GUIManager
 	projectionMatrix mgl32.Mat4
 	camera           struct {
-		position      mgl32.Vec3
-		viewDirection mgl32.Vec3
+		pitch  float64
+		yaw    float64
+		radius float64
 	}
 	mu              sync.Mutex
 	currentEntities []rawEntity
@@ -211,27 +215,50 @@ func (eng *Engine) updatePhysics() {
 	}
 
 	if eng.window.GetKey(glfw.KeyW) == glfw.Press {
-		eng.camera.position[2] -= 0.2
-	}
-	if eng.window.GetKey(glfw.KeyA) == glfw.Press {
-		eng.camera.position[0] -= 0.2
+		eng.camera.pitch += 0.05
 	}
 	if eng.window.GetKey(glfw.KeyS) == glfw.Press {
-		eng.camera.position[2] += 0.2
+		eng.camera.pitch -= 0.05
+	}
+	if eng.window.GetKey(glfw.KeyA) == glfw.Press {
+		eng.camera.yaw -= 0.05
 	}
 	if eng.window.GetKey(glfw.KeyD) == glfw.Press {
-		eng.camera.position[0] += 0.2
+		eng.camera.yaw += 0.05
 	}
 	if eng.window.GetKey(glfw.KeyZ) == glfw.Press {
-		eng.camera.position[1] -= 0.2
+		eng.camera.radius -= 0.35
 	}
 	if eng.window.GetKey(glfw.KeyX) == glfw.Press {
-		eng.camera.position[1] += 0.2
+		eng.camera.radius += 0.35
 	}
+
+	eng.camera.pitch = clamp(eng.camera.pitch, -0.8, 1.3)
+	eng.camera.yaw = math.Mod(eng.camera.yaw, math.Pi)
+	eng.camera.radius = clamp(eng.camera.radius, 4, 100)
+}
+
+func clamp(val, min, max float64) float64 {
+	if val < min {
+		val = min
+	}
+	if val > max {
+		val = max
+	}
+	return val
 }
 
 func (eng *Engine) getCameraMatrix() mgl32.Mat4 {
-	return mgl32.LookAtV(eng.camera.position, eng.camera.position.Add(eng.camera.viewDirection), mgl32.Vec3{0, 1, 0})
+	y := math.Sin(eng.camera.pitch) * eng.camera.radius
+	rxz := math.Cos(eng.camera.pitch) * eng.camera.radius
+
+	x := math.Sin(eng.camera.yaw) * rxz
+	z := math.Cos(eng.camera.yaw) * rxz
+
+	position := mgl32.Vec3{float32(x), float32(y), float32(z)}
+	lookingAt := mgl32.Vec3{0, 1, 0}
+	up := mgl32.Vec3{0, 1, 0}
+	return mgl32.LookAtV(position, lookingAt, up)
 }
 
 func (eng *Engine) Shutdown() error {
