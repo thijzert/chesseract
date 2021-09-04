@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"math"
 	"os"
 	"time"
 
@@ -237,12 +238,18 @@ func (cc glClient) RenderBoard() {
 		}
 		position := getWorldPosition(piece.Position, i)
 
-		// TODO: Make the chess pieces face each other
+		var rot mgl32.Vec3
+		if piece.Colour == chesseract.BLACK {
+			rot[1] = -0.5 * float32(math.Pi)
+		} else if piece.Colour == chesseract.WHITE {
+			rot[1] = 0.5 * float32(math.Pi)
+		}
 
 		cc.RenderingEngine.Entities = append(cc.RenderingEngine.Entities, engine.Entity{
 			ModelName: name,
 			Position:  position,
 			Scale:     mgl32.Vec3{1, 1, 1},
+			Rotation:  rot,
 			TileIndex: tileIdx,
 		})
 	}
