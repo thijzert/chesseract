@@ -297,7 +297,7 @@ func (eng *Engine) initGlfw() (*glfw.Window, error) {
 	glfw.WindowHint(glfw.ContextVersionMajor, 4)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
-	//glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 
 	window, err := glfw.CreateWindow(eng.runConfig.WindowWidth, eng.runConfig.WindowHeight, "Chesseract", nil, nil)
 	if err != nil {
