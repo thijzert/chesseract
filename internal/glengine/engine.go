@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"sync"
+	"time"
 
 	"runtime"
 
@@ -119,7 +120,19 @@ func (eng *Engine) Run() error {
 
 	eng.projectionMatrix = mgl32.Perspective(mgl32.DegToRad(70), float32(eng.runConfig.WindowWidth)/float32(eng.runConfig.WindowHeight), 0.1, 1000)
 
+	frameCap := int64(30) // TODO: make configurable
+	frameTime := time.Duration(int64(1*time.Second) / frameCap)
+	frameTimeAvg := float64(frameTime)
+	frameTime -= frameTime / 100
+	frameRobin := 0
+
+	tLast := time.Now()
 	for !eng.window.ShouldClose() && eng.ctx.Err() == nil {
+		glfw.PollEvents()
+
+		// TODO: decouple from the render loop
+		eng.updatePhysics()
+
 		eng.prepareDisplay()
 
 		err := eng.updateEntities()
@@ -137,11 +150,20 @@ func (eng *Engine) Run() error {
 
 		eng.GUI.DrawGUI()
 
-		glfw.PollEvents()
+		dFrame := time.Since(tLast)
+		if dFrame < frameTime {
+			time.Sleep(frameTime - dFrame)
+		}
+		dFrame = time.Since(tLast)
+		frameTimeAvg = 0.75*frameTimeAvg + 0.25*float64(dFrame)
+
 		eng.updateDisplay(eng.window)
 
-		// TODO: decouple from the render loop
-		eng.updatePhysics()
+		frameRobin = (frameRobin + 1) & 0x1f
+		if frameRobin == 0 {
+			eng.log("Frame rate: %.1f", float64(time.Second)/frameTimeAvg)
+		}
+		tLast = time.Now()
 	}
 
 	eng.window.Destroy()
