@@ -252,7 +252,7 @@ func (eng *Engine) updatePhysics() {
 	}
 
 	eng.camera.pitch = clamp(eng.camera.pitch, -0.8, 1.3)
-	eng.camera.yaw = math.Mod(eng.camera.yaw, math.Pi)
+	eng.camera.yaw = math.Mod(eng.camera.yaw, 2*math.Pi)
 	eng.camera.radius = clamp(eng.camera.radius, 4, 100)
 }
 
