@@ -7,41 +7,9 @@ on:
 
 jobs:
 
-  release:
+  create-release:
     runs-on: ubuntu-latest
     steps:
-    - name: Install required headers
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install build-essential libx11-dev libgl1-mesa-dev xorg-dev
-
-    - uses: actions/checkout@v2
-
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.17
-
-    - name: Compile all artefacts
-      env:
-        GOARM: 7
-      run: |
-        go run build.go -version "${{ github.ref }}"
-        go run build.go -quick -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=linux
-        mv build/chesseract build/chesseract-linux-x64
-        go run build.go -quick -version "${{ github.ref }}" -GOARCH=arm64 -GOOS=linux
-        mv build/chesseract build/chesseract-linux-rpi
-        go run build.go -quick -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=darwin
-        mv build/chesseract build/chesseract-darwin-x64
-        go run build.go -quick -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=windows
-        mv build/chesseract.exe build/chesseract-windows-x64.exe
-
-    - name: Run tests again, just to be sure
-      run: go test ./...
-
-    - name: Calculate checksums
-      run: sha256sum build/*
-
     - name: Create release
       id: create_release
       uses: actions/create-release@v1
@@ -54,7 +22,46 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Upload Release Asset (1 of 4)
+
+  release-linwin:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install required headers
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install build-essential libx11-dev libgl1-mesa-dev xorg-dev
+
+    - id: mingw
+      uses: egor-tensin/setup-mingw@2b80576206ed4b8a56507f513f28f68b03cabad8
+
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Compile Linux binary
+      run: |
+        go run build.go -version "${{ github.ref }}"
+        mv build/chesseract build/chesseract-linux-x64
+
+    - name: Compile Windows binary
+      env:
+        CGO_ENABLED: 1
+        CXX: ${{steps.mingw.outputs.gxx}}
+        CC: ${{steps.mingw.outputs.gcc}}
+      run: |
+        go run build.go -version "${{ github.ref }}" -GOARCH=amd64 -GOOS=windows
+        mv build/chesseract.exe build/chesseract-windows-x64.exe
+
+    - name: Run tests again, just to be sure
+      run: go test ./...
+
+    - name: Calculate checksums
+      run: sha256sum build/*
+
+    - name: Upload Release Asset (1 of 3)
       id: upload-release-asset-linux
       uses: actions/upload-release-asset@v1
       env:
@@ -64,27 +71,7 @@ jobs:
         asset_path: build/chesseract-linux-x64
         asset_name: chesseract-${{ github.ref }}-linux-x64
         asset_content_type: application/x-elf
-    - name: Upload Release Asset (2 of 4)
-      id: upload-release-asset-raspberrypi
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build/chesseract-linux-rpi
-        asset_name: chesseract-${{ github.ref }}-linux-rpi
-        asset_content_type: application/x-elf
-    - name: Upload Release Asset (3 of 4)
-      id: upload-release-asset-mac
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build/chesseract-darwin-x64
-        asset_name: chesseract-${{ github.ref }}-darwin-x64
-        asset_content_type: application/x-elf
-    - name: Upload Release Asset (4 of 4)
+    - name: Upload Release Asset (2 of 3)
       id: upload-release-asset-windows
       uses: actions/upload-release-asset@v1
       env:
@@ -94,4 +81,36 @@ jobs:
         asset_path: build/chesseract-windows-x64.exe
         asset_name: chesseract-${{ github.ref }}-windows-x64.exe
         asset_content_type: application/x-msdownload
+
+  release-mac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Compile mac binary
+      run: |
+        go run build.go -version "${{ github.ref }}"
+        mv build/chesseract build/chesseract-darwin-x64
+
+    - name: Run tests again, just to be sure
+      run: go test ./...
+
+    - name: Calculate checksums
+      run: shasum -a 256 build/*
+
+    - name: Upload Release Asset (3 of 3)
+      id: upload-release-asset-mac
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/chesseract-darwin-x64
+        asset_name: chesseract-${{ github.ref }}-darwin-x64
+        asset_content_type: application/x-elf
 
