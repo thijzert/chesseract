@@ -120,7 +120,7 @@ func (eng *Engine) Run() error {
 
 	eng.projectionMatrix = mgl32.Perspective(mgl32.DegToRad(70), float32(eng.runConfig.WindowWidth)/float32(eng.runConfig.WindowHeight), 0.1, 1000)
 
-	frameCap := int64(30) // TODO: make configurable
+	frameCap := int64(60) // TODO: make configurable
 	frameTime := time.Duration(int64(1*time.Second) / frameCap)
 	frameTimeAvg := float64(frameTime)
 	frameTime -= frameTime / 100
@@ -148,7 +148,7 @@ func (eng *Engine) Run() error {
 		}
 		eng.mu.Unlock()
 
-		eng.GUI.DrawGUI()
+		// eng.GUI.DrawGUI()
 
 		dFrame := time.Since(tLast)
 		if dFrame < frameTime {
