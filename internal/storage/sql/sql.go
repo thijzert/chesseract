@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/thijzert/chesseract/chesseract"
 	"github.com/thijzert/chesseract/chesseract/game"
-	"github.com/thijzert/chesseract/internal/notimplemented"
 	"github.com/thijzert/chesseract/internal/storage"
 
 	"github.com/go-sql-driver/mysql"
@@ -79,7 +78,7 @@ func (d *SQLBackend) TransactionContext(ctx context.Context, f func(context.Cont
 	childCtx := context.WithValue(ctx, sqlTransactionRunning(true), true)
 	err = f(childCtx)
 	if err != nil {
-		_, err = d.conn.ExecContext(ctx, "ROLLBACK")
+		d.conn.ExecContext(ctx, "ROLLBACK")
 		return err
 	}
 
@@ -101,7 +100,8 @@ func (d *SQLBackend) NewSessionContext(ctx context.Context) (storage.SessionID, 
 func (d *SQLBackend) GetSessionContext(ctx context.Context, id storage.SessionID) (storage.Session, error) {
 	rv := storage.Session{}
 
-	var strSID, strPID string
+	var strSID string
+	var strPID sql.NullString
 
 	err := d.conn.QueryRowContext(ctx, `
 		SELECT SessionID, PlayerID FROM Session WHERE SessionID = ? AND Inactive = 0
@@ -116,8 +116,8 @@ func (d *SQLBackend) GetSessionContext(ctx context.Context, id storage.SessionID
 
 	d.conn.ExecContext(ctx, `UPDATE Session SET LastSeen = NOW() WHERE SessionID = ?`, strSID)
 
-	if strPID != "" {
-		rv.PlayerID, err = storage.ParsePlayerID(strPID)
+	if strPID.Valid {
+		rv.PlayerID, err = storage.ParsePlayerID(strPID.String)
 	}
 
 	return rv, err
@@ -125,12 +125,18 @@ func (d *SQLBackend) GetSessionContext(ctx context.Context, id storage.SessionID
 
 // StoreSession updates a modified Session in the datastore
 func (d *SQLBackend) StoreSessionContext(ctx context.Context, id storage.SessionID, sess storage.Session) error {
+	var strPID sql.NullString
+	if !sess.PlayerID.IsEmpty() {
+		strPID.Valid = true
+		strPID.String = sess.PlayerID.String()
+	}
+
 	_, err := d.conn.ExecContext(ctx, `
-		UPDATE SessionID
+		UPDATE Session
 		SET PlayerID = ?,
 			LastSeen = NOW()
 		WHERE SessionID = ? AND Inactive = 0
-	`, sess.PlayerID.String(), id.String())
+	`, strPID, id.String())
 
 	return err
 }
@@ -146,11 +152,20 @@ func (d *SQLBackend) NewPlayerContext(ctx context.Context) (storage.PlayerID, ga
 
 // GetPlayer retrieves a player from the store
 func (d *SQLBackend) GetPlayerContext(ctx context.Context, id storage.PlayerID) (game.Player, error) {
+	var name, realm sql.NullString
 	rv := game.Player{}
 	err := d.conn.QueryRowContext(ctx, `
 		SELECT Name, Realm, GenderR, GenderI, GenderJ, GenderK, ELORating
 		FROM Player WHERE PlayerID = ?
-	`, id.String()).Scan(&rv.Name, &rv.Realm, &rv.Gender.R, &rv.Gender.I, &rv.Gender.J, &rv.Gender.K, &rv.ELORating)
+	`, id.String()).Scan(&name, &realm, &rv.Gender.R, &rv.Gender.I, &rv.Gender.J, &rv.Gender.K, &rv.ELORating)
+
+	if name.Valid {
+		rv.Name = name.String
+	}
+	if realm.Valid {
+		rv.Realm = realm.String
+	}
+
 	return rv, err
 }
 
@@ -253,6 +268,9 @@ func (d *SQLBackend) GetGameContext(ctx context.Context, id storage.GameID) (gam
 	// Get Players
 	roles := rv.Match.RuleSet.PlayerColours()
 	rows, err := d.conn.QueryContext(ctx, `SELECT PlayerID, Role FROM MatchRole WHERE MatchID = ?`, id.String())
+	if err != nil {
+		return rv, err
+	}
 	type playerRole struct {
 		PlayerID  string
 		PlayingAs chesseract.Colour
@@ -337,13 +355,21 @@ func (d *SQLBackend) GetGameContext(ctx context.Context, id storage.GameID) (gam
 
 // StoreGame updates a modified Game in the datastore
 func (d *SQLBackend) StoreGameContext(ctx context.Context, id storage.GameID, match game.Game) error {
+	var ruleSet string
+	err := d.conn.QueryRowContext(ctx, `
+		SELECT RuleSet FROM Match_ WHERE MatchID = ?
+	`, id.String()).Scan(&ruleSet)
+	if err != nil {
+		return err
+	}
+
 	finalised := false
 	for _, r := range match.Result {
 		if r != 0.0 {
 			finalised = true
 		}
 	}
-	res, err := d.conn.ExecContext(ctx, `
+	_, err = d.conn.ExecContext(ctx, `
 		UPDATE Match_
 		SET RuleSet = ?,
 			StartTime = ?,
@@ -352,10 +378,6 @@ func (d *SQLBackend) StoreGameContext(ctx context.Context, id storage.GameID, ma
 	`, match.Match.RuleSet.String(), match.Match.StartTime, finalised, id.String())
 	if err != nil {
 		return err
-	}
-	aff, _ := res.RowsAffected()
-	if aff == 0 {
-		return sql.ErrNoRows
 	}
 
 	playersDirty := true
@@ -414,5 +436,31 @@ func (d *SQLBackend) StoreGameContext(ctx context.Context, id storage.GameID, ma
 // GetActiveGames returns the GameID's of all active games in which the
 // Player identified by the PlayerID is a participant
 func (d *SQLBackend) GetActiveGamesContext(ctx context.Context, id storage.PlayerID) ([]storage.GameID, error) {
-	return nil, notimplemented.Error()
+	rows, err := d.conn.QueryContext(ctx, `
+		SELECT MatchID
+		FROM MatchRole
+			INNER JOIN Match_ USING ( MatchID )
+		WHERE PlayerID = ? AND Finalised = 0
+		GROUP BY MatchID
+		ORDER BY StartTime DESC
+	`, id.String())
+	if err != nil {
+		return nil, err
+	}
+
+	var rv []storage.GameID = nil
+	for rows.Next() {
+		var strGID string
+		err = rows.Scan(&strGID)
+		if err != nil {
+			return nil, err
+		}
+		gid, err := storage.ParseGameID(strGID)
+		if err != nil {
+			return nil, err
+		}
+		rv = append(rv, gid)
+	}
+
+	return rv, rows.Close()
 }

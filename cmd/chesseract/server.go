@@ -9,6 +9,8 @@ import (
 	"os"
 
 	plumbing "github.com/thijzert/chesseract/internal/web-plumbing"
+
+	_ "github.com/thijzert/chesseract/internal/storage/sql"
 )
 
 func apiServer(conf *Config, args []string) error {

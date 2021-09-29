@@ -119,6 +119,7 @@ func (s *Server) getProvider(r *http.Request) (web.Provider, storage.SessionID) 
 				rv.PlayerID = sesh.PlayerID
 			} else {
 				// Maybe differentiate between the session not existing and a generic database error
+				s.errorLog.Print(err)
 			}
 		}
 	}
