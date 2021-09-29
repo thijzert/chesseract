@@ -1,0 +1,46 @@
+erDiagram
+
+	Player {
+		string PlayerID
+		string Name
+		string Realm
+		quaternion Gender
+		float ELORating
+		string Pubkey
+	}
+
+	Match {
+		string MatchID
+		string RuleSet
+		datetime StartTime
+		bool Finalised
+	}
+
+	Player ||--o{ Nonce : ""
+	Nonce {
+		string Nonce
+		string PlayerID
+	}
+
+	Player ||--o{ Session : ""
+	Session {
+		string SessionID
+		string PlayerID
+		datetime Created
+		datetime LastSeen
+	}
+
+
+	Player ||--o{ MatchRole : ""
+	Match ||--o{ MatchRole : ""
+	MatchRole {
+		int Colour
+		float Result
+	}
+	Match ||--o{ Move : ""
+	Move {
+		int Ordinal
+		string From
+		string To
+		float Time
+	}

@@ -58,6 +58,16 @@ func (p PlayerID) IsEmpty() bool {
 	return p[0] == 0 && p[1] == 0
 }
 
+func (p PlayerID) String() string {
+	return fmt.Sprintf("%016x-%016x", p[0], p[1])
+}
+
+func ParsePlayerID(str string) (PlayerID, error) {
+	var p PlayerID
+	_, err := fmt.Sscanf(str, "%x-%x", &p[0], &p[1])
+	return p, err
+}
+
 type GameID [2]uint64
 
 // NewGameID generates a new GameID. The probability of colliding with a
