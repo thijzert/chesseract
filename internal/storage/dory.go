@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -41,7 +42,7 @@ func (d *Dory) String() string {
 	return "dummy storage backend; no data is sav- ooooh, what's that?"
 }
 
-func (d *Dory) Initialise() error {
+func (d *Dory) Initialise(context.Context) error {
 	d.mu.Lock()
 	// Just keep swimming
 
@@ -54,22 +55,23 @@ func (d *Dory) Initialise() error {
 	d.mu.Unlock()
 
 	if d.params == "northwind" {
+		ctx := context.Background()
 		// Fill the database with some default values
-		id, pl, _ := d.NewPlayer()
+		id, pl, _ := d.NewPlayer(ctx)
 		pl.Name = "alice"
 		pl.Gender = game.FEMALE
-		d.StorePlayer(id, pl)
+		d.StorePlayer(ctx, id, pl)
 
-		id, pl, _ = d.NewPlayer()
+		id, pl, _ = d.NewPlayer(ctx)
 		pl.Name = "bob"
 		pl.Gender = game.MALE
-		d.StorePlayer(id, pl)
+		d.StorePlayer(ctx, id, pl)
 	}
 
 	return nil
 }
 
-func (d *Dory) Close() error {
+func (d *Dory) Close(context.Context) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -84,9 +86,9 @@ func (d *Dory) Close() error {
 // If it returns any error, the transaction is rolled back. If it
 // returns nil, it is committed.
 // Transaction only returns an error if committing or rolling back fails.
-func (d *Dory) Transaction(f func() error) error {
+func (d *Dory) Transaction(ctx context.Context, f func(context.Context) error) error {
 	// Transactions are just not supported
-	err := f()
+	err := f(ctx)
 	if err != nil {
 		return fmt.Errorf("transactions are not supported; unable to roll back")
 	}
@@ -95,15 +97,15 @@ func (d *Dory) Transaction(f func() error) error {
 }
 
 // NewSession creates a new session
-func (d *Dory) NewSession() (SessionID, Session, error) {
+func (d *Dory) NewSession(ctx context.Context) (SessionID, Session, error) {
 	sessionID := NewSessionID()
 	defaultSession := Session{}
 
-	return sessionID, defaultSession, d.StoreSession(sessionID, defaultSession)
+	return sessionID, defaultSession, d.StoreSession(ctx, sessionID, defaultSession)
 }
 
 // GetSession retrieves a session from the store
-func (d *Dory) GetSession(id SessionID) (Session, error) {
+func (d *Dory) GetSession(_ context.Context, id SessionID) (Session, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -116,7 +118,7 @@ func (d *Dory) GetSession(id SessionID) (Session, error) {
 }
 
 // StoreSession updates a modified Session in the datastore
-func (d *Dory) StoreSession(id SessionID, sess Session) error {
+func (d *Dory) StoreSession(_ context.Context, id SessionID, sess Session) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -126,15 +128,15 @@ func (d *Dory) StoreSession(id SessionID, sess Session) error {
 }
 
 // NewPlayer creates a new player
-func (d *Dory) NewPlayer() (PlayerID, game.Player, error) {
+func (d *Dory) NewPlayer(ctx context.Context) (PlayerID, game.Player, error) {
 	id := NewPlayerID()
 	player := game.Player{}
 
-	return id, player, d.StorePlayer(id, player)
+	return id, player, d.StorePlayer(ctx, id, player)
 }
 
 // GetPlayer retrieves a player from the store
-func (d *Dory) GetPlayer(id PlayerID) (game.Player, error) {
+func (d *Dory) GetPlayer(_ context.Context, id PlayerID) (game.Player, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -147,7 +149,7 @@ func (d *Dory) GetPlayer(id PlayerID) (game.Player, error) {
 }
 
 // StorePlayer updates a modified Player in the datastore
-func (d *Dory) StorePlayer(id PlayerID, player game.Player) error {
+func (d *Dory) StorePlayer(_ context.Context, id PlayerID, player game.Player) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -156,7 +158,7 @@ func (d *Dory) StorePlayer(id PlayerID, player game.Player) error {
 	return nil
 }
 
-func (d *Dory) LookupPlayer(name string) (PlayerID, bool, error) {
+func (d *Dory) LookupPlayer(_ context.Context, name string) (PlayerID, bool, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -171,7 +173,7 @@ func (d *Dory) LookupPlayer(name string) (PlayerID, bool, error) {
 
 // NewNonceForPlayer generates a new nonce, and assigns it to the player
 // It should also invalidate any existing nonces for this player.
-func (d *Dory) NewNonceForPlayer(id PlayerID) (Nonce, error) {
+func (d *Dory) NewNonceForPlayer(_ context.Context, id PlayerID) (Nonce, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -192,7 +194,7 @@ func (d *Dory) NewNonceForPlayer(id PlayerID) (Nonce, error) {
 // CheckNonce checks if the nonce exists, and is assigned to that player. A
 // successful result invalidates the nonce. (Implied in the 'once' part in
 // 'nonce')
-func (d *Dory) CheckNonce(id PlayerID, nonce Nonce) (bool, error) {
+func (d *Dory) CheckNonce(_ context.Context, id PlayerID, nonce Nonce) (bool, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -208,15 +210,15 @@ func (d *Dory) CheckNonce(id PlayerID, nonce Nonce) (bool, error) {
 }
 
 // NewGame creates a new game
-func (d *Dory) NewGame() (GameID, game.Game, error) {
+func (d *Dory) NewGame(ctx context.Context) (GameID, game.Game, error) {
 	id := NewGameID()
 	match := game.Game{}
 
-	return id, match, d.StoreGame(id, match)
+	return id, match, d.StoreGame(ctx, id, match)
 }
 
 // GetGame retrieves a game from the store
-func (d *Dory) GetGame(id GameID) (game.Game, error) {
+func (d *Dory) GetGame(_ context.Context, id GameID) (game.Game, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -229,7 +231,7 @@ func (d *Dory) GetGame(id GameID) (game.Game, error) {
 }
 
 // StoreGame updates a modified Game in the datastore
-func (d *Dory) StoreGame(id GameID, match game.Game) error {
+func (d *Dory) StoreGame(_ context.Context, id GameID, match game.Game) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -240,7 +242,7 @@ func (d *Dory) StoreGame(id GameID, match game.Game) error {
 
 // GetActiveGames returns the GameID's of all active games in which the
 // Player identified by the PlayerID is a participant
-func (d *Dory) GetActiveGames(id PlayerID) ([]GameID, error) {
+func (d *Dory) GetActiveGames(_ context.Context, id PlayerID) ([]GameID, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 

@@ -56,9 +56,9 @@ func New(config ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	err = s.storage.Initialise()
+	err = s.storage.Initialise(s.context)
 	if err != nil {
-		s.storage.Close()
+		s.storage.Close(s.context)
 		return nil, err
 	}
 
@@ -88,7 +88,7 @@ func (s *Server) Close() error {
 	// Make sure we clean up everything, even if we encounter errors along the way
 	allErrors := []error{}
 
-	allErrors = append(allErrors, s.storage.Close())
+	allErrors = append(allErrors, s.storage.Close(s.context))
 
 	for _, err := range allErrors {
 		if err != nil {
@@ -113,7 +113,7 @@ func (s *Server) getProvider(r *http.Request) (web.Provider, storage.SessionID) 
 	if auth := r.Header.Get("Authorisation"); len(auth) > 10 {
 		ns, err := storage.ParseSessionID(auth[7:])
 		if err == nil {
-			sesh, err := s.storage.GetSession(ns)
+			sesh, err := s.storage.GetSession(rv.Context, ns)
 			if err == nil {
 				rv.SessionID = ns
 				rv.PlayerID = sesh.PlayerID
@@ -150,7 +150,7 @@ type webProvider struct {
 // NewSession generates a new empty session, and returns a string
 // representation of its ID, to be communicated to the client.
 func (w webProvider) NewSession() (string, error) {
-	id, _, err := w.Server.storage.NewSession()
+	id, _, err := w.Server.storage.NewSession(w.Context)
 	if err != nil {
 		return "", err
 	}
@@ -162,13 +162,13 @@ func (w webProvider) Player() (game.Player, error) {
 	if w.PlayerID.IsEmpty() {
 		return game.Player{}, errNoPlayer
 	}
-	return w.Server.storage.GetPlayer(w.PlayerID)
+	return w.Server.storage.GetPlayer(w.Context, w.PlayerID)
 }
 
 // SetPlayer assigns this player to this session
 func (w webProvider) SetPlayer(player game.Player) error {
 	// FIXME: this next line wtf
-	id, ok, err := w.Server.storage.LookupPlayer(player.Name)
+	id, ok, err := w.Server.storage.LookupPlayer(w.Context, player.Name)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (w webProvider) SetPlayer(player game.Player) error {
 	}
 
 	// FIXME: run this in a transaction
-	sess, err := w.Server.storage.GetSession(w.SessionID)
+	sess, err := w.Server.storage.GetSession(w.Context, w.SessionID)
 	if err != nil {
 		return err
 	}
@@ -187,23 +187,23 @@ func (w webProvider) SetPlayer(player game.Player) error {
 	}
 
 	sess.PlayerID = id
-	return w.Server.storage.StoreSession(w.SessionID, sess)
+	return w.Server.storage.StoreSession(w.Context, w.SessionID, sess)
 }
 
 // LookupPlayer finds the profile in the database, if it exists
 func (w webProvider) LookupPlayer(name string) (game.Player, bool, error) {
-	id, ok, err := w.Server.storage.LookupPlayer(name)
+	id, ok, err := w.Server.storage.LookupPlayer(w.Context, name)
 	if !ok || err != nil {
 		return game.Player{}, ok, err
 	}
 
-	player, err := w.Server.storage.GetPlayer(id)
+	player, err := w.Server.storage.GetPlayer(w.Context, id)
 	return player, ok, err
 }
 
 // NewNonce generates a new auth challenge for this player
 func (w webProvider) NewNonce(playerName string) (string, error) {
-	id, ok, err := w.Server.storage.LookupPlayer(playerName)
+	id, ok, err := w.Server.storage.LookupPlayer(w.Context, playerName)
 	if err != nil {
 		return "", err
 	}
@@ -211,7 +211,7 @@ func (w webProvider) NewNonce(playerName string) (string, error) {
 		return "", errNoPlayer
 	}
 
-	nonce, err := w.Server.storage.NewNonceForPlayer(id)
+	nonce, err := w.Server.storage.NewNonceForPlayer(w.Context, id)
 	if err != nil {
 		return "", err
 	}
@@ -221,7 +221,7 @@ func (w webProvider) NewNonce(playerName string) (string, error) {
 
 // ValidateNonce checks if a nonce is valid for this player
 func (w webProvider) ValidateNonce(playerName string, nonce string) (bool, error) {
-	id, ok, err := w.Server.storage.LookupPlayer(playerName)
+	id, ok, err := w.Server.storage.LookupPlayer(w.Context, playerName)
 	if err != nil {
 		return false, err
 	}
@@ -229,7 +229,7 @@ func (w webProvider) ValidateNonce(playerName string, nonce string) (bool, error
 		return false, nil
 	}
 
-	return w.Server.storage.CheckNonce(id, storage.Nonce(nonce))
+	return w.Server.storage.CheckNonce(w.Context, id, storage.Nonce(nonce))
 }
 
 // ActiveGames returns the list of active game ID's in which the player is involved
@@ -238,7 +238,7 @@ func (w webProvider) ActiveGames() ([]string, error) {
 		return nil, errNoPlayer
 	}
 
-	gids, err := w.Server.storage.GetActiveGames(w.PlayerID)
+	gids, err := w.Server.storage.GetActiveGames(w.Context, w.PlayerID)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (w webProvider) GetGame(gameid string) (*game.Game, error) {
 		return nil, weberrors.WithCode(err, 400)
 	}
 
-	g, err := w.Server.storage.GetGame(id)
+	g, err := w.Server.storage.GetGame(w.Context, id)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func (w webProvider) GetGame(gameid string) (*game.Game, error) {
 
 // NewGame creates a new game with the specified players, and returns its game ID
 func (w webProvider) NewGame(ruleset string, playerNames []string) (string, error) {
-	sess, err := w.Server.storage.GetSession(w.SessionID)
+	sess, err := w.Server.storage.GetSession(w.Context, w.SessionID)
 	if err != nil {
 		return "", err
 	}
@@ -291,7 +291,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 	}
 
 	for i, playerName := range playerNames {
-		id, ok, err := w.Server.storage.LookupPlayer(playerName)
+		id, ok, err := w.Server.storage.LookupPlayer(w.Context, playerName)
 		if err != nil {
 			return "", err
 		}
@@ -302,7 +302,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 			found = true
 		}
 
-		players[i], err = w.Server.storage.GetPlayer(id)
+		players[i], err = w.Server.storage.GetPlayer(w.Context, id)
 		if err != nil {
 			return "", err
 		}
@@ -311,7 +311,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 		return "", weberrors.WithMessage(weberrors.WithStatus(errors.New("you are already logged in"), 400), "You can't start a game for others", "Until I implement organising tournaments, you can only start a game if you're part of it.")
 	}
 
-	id, g, err := w.Server.storage.NewGame()
+	id, g, err := w.Server.storage.NewGame(w.Context)
 	if err != nil {
 		return "", err
 	}
@@ -329,7 +329,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 	g.Match.StartTime = time.Now()
 	g.Match.Board = g.Match.RuleSet.DefaultBoard()
 
-	err = w.Server.storage.StoreGame(id, g)
+	err = w.Server.storage.StoreGame(w.Context, id, g)
 	if err != nil {
 		return "", err
 	}
@@ -338,7 +338,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 }
 
 func (w webProvider) Game() (*game.Game, error) {
-	rv, err := w.Server.storage.GetGame(w.GameID)
+	rv, err := w.Server.storage.GetGame(w.Context, w.GameID)
 	if err != nil {
 		return nil, err
 	}
@@ -347,8 +347,8 @@ func (w webProvider) Game() (*game.Game, error) {
 }
 
 func (w webProvider) SubmitMove(mov chesseract.Move) error {
-	return w.Server.storage.Transaction(func() error {
-		g, err := w.Server.storage.GetGame(w.GameID)
+	return w.Server.storage.Transaction(w.Context, func(ctx context.Context) error {
+		g, err := w.Server.storage.GetGame(ctx, w.GameID)
 		if err != nil {
 			return err
 		}
@@ -371,6 +371,6 @@ func (w webProvider) SubmitMove(mov chesseract.Move) error {
 		g.Match.Board = newb
 		g.Match.Moves = append(g.Match.Moves, mov)
 
-		return w.Server.storage.StoreGame(w.GameID, g)
+		return w.Server.storage.StoreGame(ctx, w.GameID, g)
 	})
 }

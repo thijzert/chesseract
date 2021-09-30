@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-func (d *SQLBackend) InitialiseContext(ctx context.Context) error {
+func (d *SQLBackend) Initialise(ctx context.Context) error {
 	var err error
 	_, err = d.conn.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS Player (

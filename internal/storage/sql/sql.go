@@ -54,7 +54,7 @@ func (d *SQLBackend) String() string {
 	return "SQL"
 }
 
-func (d *SQLBackend) Close() error {
+func (d *SQLBackend) Close(context.Context) error {
 	return d.conn.Close()
 }
 
@@ -64,7 +64,7 @@ type sqlTransactionRunning bool
 // If it returns any error, the transaction is rolled back. If it
 // returns nil, it is committed.
 // Transaction only returns an error if committing or rolling back fails.
-func (d *SQLBackend) TransactionContext(ctx context.Context, f func(context.Context) error) error {
+func (d *SQLBackend) Transaction(ctx context.Context, f func(context.Context) error) error {
 	if ctx.Value(sqlTransactionRunning(true)) != nil {
 		return f(ctx)
 	}
@@ -87,7 +87,7 @@ func (d *SQLBackend) TransactionContext(ctx context.Context, f func(context.Cont
 }
 
 // NewSession creates a new session
-func (d *SQLBackend) NewSessionContext(ctx context.Context) (storage.SessionID, storage.Session, error) {
+func (d *SQLBackend) NewSession(ctx context.Context) (storage.SessionID, storage.Session, error) {
 	sid := storage.NewSessionID()
 	_, err := d.conn.ExecContext(ctx, `
 		INSERT INTO Session ( SessionID, PlayerID, Created, LastSeen, Inactive )
@@ -97,7 +97,7 @@ func (d *SQLBackend) NewSessionContext(ctx context.Context) (storage.SessionID, 
 }
 
 // GetSession retrieves a session from the store
-func (d *SQLBackend) GetSessionContext(ctx context.Context, id storage.SessionID) (storage.Session, error) {
+func (d *SQLBackend) GetSession(ctx context.Context, id storage.SessionID) (storage.Session, error) {
 	rv := storage.Session{}
 
 	var strSID string
@@ -124,7 +124,7 @@ func (d *SQLBackend) GetSessionContext(ctx context.Context, id storage.SessionID
 }
 
 // StoreSession updates a modified Session in the datastore
-func (d *SQLBackend) StoreSessionContext(ctx context.Context, id storage.SessionID, sess storage.Session) error {
+func (d *SQLBackend) StoreSession(ctx context.Context, id storage.SessionID, sess storage.Session) error {
 	var strPID sql.NullString
 	if !sess.PlayerID.IsEmpty() {
 		strPID.Valid = true
@@ -142,7 +142,7 @@ func (d *SQLBackend) StoreSessionContext(ctx context.Context, id storage.Session
 }
 
 // NewPlayer creates a new player
-func (d *SQLBackend) NewPlayerContext(ctx context.Context) (storage.PlayerID, game.Player, error) {
+func (d *SQLBackend) NewPlayer(ctx context.Context) (storage.PlayerID, game.Player, error) {
 	pid := storage.NewPlayerID()
 	_, err := d.conn.ExecContext(ctx, `
 		INSERT INTO Player ( PlayerID ) VALUES ( ? )
@@ -151,7 +151,7 @@ func (d *SQLBackend) NewPlayerContext(ctx context.Context) (storage.PlayerID, ga
 }
 
 // GetPlayer retrieves a player from the store
-func (d *SQLBackend) GetPlayerContext(ctx context.Context, id storage.PlayerID) (game.Player, error) {
+func (d *SQLBackend) GetPlayer(ctx context.Context, id storage.PlayerID) (game.Player, error) {
 	var name, realm sql.NullString
 	rv := game.Player{}
 	err := d.conn.QueryRowContext(ctx, `
@@ -170,7 +170,7 @@ func (d *SQLBackend) GetPlayerContext(ctx context.Context, id storage.PlayerID) 
 }
 
 // StorePlayer updates a modified Player in the datastore
-func (d *SQLBackend) StorePlayerContext(ctx context.Context, id storage.PlayerID, player game.Player) error {
+func (d *SQLBackend) StorePlayer(ctx context.Context, id storage.PlayerID, player game.Player) error {
 	_, err := d.conn.ExecContext(ctx, `
 		UPDATE Player
 		SET Name = ?,
@@ -183,7 +183,7 @@ func (d *SQLBackend) StorePlayerContext(ctx context.Context, id storage.PlayerID
 	return err
 }
 
-func (d *SQLBackend) LookupPlayerContext(ctx context.Context, name string) (storage.PlayerID, bool, error) {
+func (d *SQLBackend) LookupPlayer(ctx context.Context, name string) (storage.PlayerID, bool, error) {
 	var strPID string
 	err := d.conn.QueryRowContext(ctx, `SELECT PlayerID FROM Player WHERE Name = ?`, name).Scan(&strPID)
 	if err == sql.ErrNoRows {
@@ -198,9 +198,9 @@ func (d *SQLBackend) LookupPlayerContext(ctx context.Context, name string) (stor
 
 // NewNonceForPlayer generates a new nonce, and assigns it to the player
 // It should also invalidate any existing nonces for this player.
-func (d *SQLBackend) NewNonceForPlayerContext(ctx context.Context, id storage.PlayerID) (storage.Nonce, error) {
+func (d *SQLBackend) NewNonceForPlayer(ctx context.Context, id storage.PlayerID) (storage.Nonce, error) {
 	var err error
-	if _, err = d.GetPlayerContext(ctx, id); err != nil {
+	if _, err = d.GetPlayer(ctx, id); err != nil {
 		return "", err
 	}
 
@@ -221,7 +221,7 @@ func (d *SQLBackend) NewNonceForPlayerContext(ctx context.Context, id storage.Pl
 // CheckNonce checks if the nonce exists, and is assigned to that player. A
 // successful result invalidates the nonce. (Implied in the 'once' part in
 // 'nonce')
-func (d *SQLBackend) CheckNonceContext(ctx context.Context, id storage.PlayerID, nonce storage.Nonce) (bool, error) {
+func (d *SQLBackend) CheckNonce(ctx context.Context, id storage.PlayerID, nonce storage.Nonce) (bool, error) {
 	var err error
 	var nn string
 
@@ -239,7 +239,7 @@ func (d *SQLBackend) CheckNonceContext(ctx context.Context, id storage.PlayerID,
 }
 
 // NewGame creates a new game
-func (d *SQLBackend) NewGameContext(ctx context.Context) (storage.GameID, game.Game, error) {
+func (d *SQLBackend) NewGame(ctx context.Context) (storage.GameID, game.Game, error) {
 	g := game.Game{}
 	gid := storage.NewGameID()
 	_, err := d.conn.ExecContext(ctx, `INSERT INTO Match_ ( MatchID, StartTime ) VALUES ( ?, NOW() )`, gid.String())
@@ -250,7 +250,7 @@ func (d *SQLBackend) NewGameContext(ctx context.Context) (storage.GameID, game.G
 }
 
 // GetGame retrieves a game from the store
-func (d *SQLBackend) GetGameContext(ctx context.Context, id storage.GameID) (game.Game, error) {
+func (d *SQLBackend) GetGame(ctx context.Context, id storage.GameID) (game.Game, error) {
 	rv := game.Game{}
 
 	var ruleSet string
@@ -295,7 +295,7 @@ func (d *SQLBackend) GetGameContext(ctx context.Context, id storage.GameID) (gam
 				if err != nil {
 					return rv, err
 				}
-				player, err := d.GetPlayerContext(ctx, pid)
+				player, err := d.GetPlayer(ctx, pid)
 				if err != nil {
 					return rv, err
 				}
@@ -354,7 +354,7 @@ func (d *SQLBackend) GetGameContext(ctx context.Context, id storage.GameID) (gam
 }
 
 // StoreGame updates a modified Game in the datastore
-func (d *SQLBackend) StoreGameContext(ctx context.Context, id storage.GameID, match game.Game) error {
+func (d *SQLBackend) StoreGame(ctx context.Context, id storage.GameID, match game.Game) error {
 	var ruleSet string
 	err := d.conn.QueryRowContext(ctx, `
 		SELECT RuleSet FROM Match_ WHERE MatchID = ?
@@ -397,7 +397,7 @@ func (d *SQLBackend) StoreGameContext(ctx context.Context, id storage.GameID, ma
 			for _, pl := range match.Players {
 				if pl.PlayingAs == c {
 					// HACK: players don't know their own ID. Should I change that?
-					pid, ok, err := d.LookupPlayerContext(ctx, pl.Name)
+					pid, ok, err := d.LookupPlayer(ctx, pl.Name)
 					if err != nil {
 						return nil
 					}
@@ -435,7 +435,7 @@ func (d *SQLBackend) StoreGameContext(ctx context.Context, id storage.GameID, ma
 
 // GetActiveGames returns the GameID's of all active games in which the
 // Player identified by the PlayerID is a participant
-func (d *SQLBackend) GetActiveGamesContext(ctx context.Context, id storage.PlayerID) ([]storage.GameID, error) {
+func (d *SQLBackend) GetActiveGames(ctx context.Context, id storage.PlayerID) ([]storage.GameID, error) {
 	rows, err := d.conn.QueryContext(ctx, `
 		SELECT MatchID
 		FROM MatchRole
