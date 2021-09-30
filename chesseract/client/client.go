@@ -20,7 +20,7 @@ type Client interface {
 	ActiveGames(context.Context) ([]GameSession, error)
 
 	// NewGame initialises a Game with the specified players
-	NewGame(context.Context, []game.Player) (GameSession, error)
+	NewGame(context.Context, chesseract.RuleSet, []game.Player) (GameSession, error)
 }
 
 type GameSession interface {

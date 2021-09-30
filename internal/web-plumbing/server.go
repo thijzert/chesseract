@@ -3,6 +3,7 @@ package plumbing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -278,11 +279,9 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 	players := make([]game.Player, len(playerNames))
 	found := false
 
-	var rs chesseract.RuleSet
-	if ruleset == "Boring2D" {
-		rs = chesseract.Boring2D{}
-	} else {
-		return "", weberrors.WithStatus(errors.New("TODO: properly parse rulesets from a string"), 400)
+	rs := chesseract.GetRuleSet(ruleset)
+	if rs == nil {
+		return "", weberrors.WithStatus(fmt.Errorf("unknown ruleset '%s'", ruleset), 400)
 	}
 
 	pc := rs.PlayerColours()
@@ -316,8 +315,7 @@ func (w webProvider) NewGame(ruleset string, playerNames []string) (string, erro
 		return "", err
 	}
 
-	// FIXME: make configurable
-	g.Match.RuleSet = chesseract.Boring2D{}
+	g.Match.RuleSet = rs
 
 	for i, c := range pc {
 		g.Players = append(g.Players, game.MatchPlayer{

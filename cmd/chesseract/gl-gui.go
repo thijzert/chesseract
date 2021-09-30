@@ -23,6 +23,7 @@ func glGame(conf *Config, args []string) error {
 	fmt.Printf("Hello from version '%s'\n", engine.PackageVersion)
 
 	var autoquit int64
+	var ruleset string
 
 	rc := engine.DefaultConfig()
 	rc.Logger = log.New(os.Stdout, "[gl] ", log.Ltime|log.Lshortfile)
@@ -35,9 +36,15 @@ func glGame(conf *Config, args []string) error {
 	glSettings.IntVar(&rc.WindowWidth, "w", 1280, "Window width")
 	glSettings.IntVar(&rc.WindowHeight, "h", 720, "Window height")
 	glSettings.Int64Var(&autoquit, "autoquit", 0, "Automatically quit after x ms (0 to disable)")
+	glSettings.StringVar(&ruleset, "ruleset", "Chesseract", "Rule set to use for new games")
 	err := glSettings.Parse(args)
 	if err != nil {
 		return err
+	}
+
+	rs := chesseract.GetRuleSet(ruleset)
+	if rs == nil {
+		return fmt.Errorf("unknown ruleset '%s'", ruleset)
 	}
 
 	ctx := context.Background()
@@ -71,7 +78,7 @@ func glGame(conf *Config, args []string) error {
 			if len(ag) > 0 {
 				g = ag[0]
 			} else {
-				g, err = c.NewGame(ctx, []game.Player{
+				g, err = c.NewGame(ctx, rs, []game.Player{
 					{Name: "alice"},
 					{Name: "bob"},
 				})

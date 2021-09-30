@@ -161,12 +161,12 @@ func (o *oneVoneClient) ActiveGames(context.Context) ([]client.GameSession, erro
 	return []client.GameSession{o}, nil
 }
 
-func (o *oneVoneClient) NewGame(ctx context.Context, players []game.Player) (client.GameSession, error) {
+func (o *oneVoneClient) NewGame(ctx context.Context, rs chesseract.RuleSet, players []game.Player) (client.GameSession, error) {
 	if o.server.Game == nil {
 		o.server.Game = &game.Game{
 			Match: chesseract.Match{
-				RuleSet:   chesseract.Boring2D{},
-				Board:     chesseract.Boring2D{}.DefaultBoard(),
+				RuleSet:   rs,
+				Board:     rs.DefaultBoard(),
 				StartTime: time.Now(),
 			},
 		}

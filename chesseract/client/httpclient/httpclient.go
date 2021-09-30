@@ -241,9 +241,9 @@ func (c *HttpClient) ActiveGames(ctx context.Context) ([]client.GameSession, err
 }
 
 // NewGame initialises a Game with the specified players
-func (c *HttpClient) NewGame(ctx context.Context, players []game.Player) (client.GameSession, error) {
+func (c *HttpClient) NewGame(ctx context.Context, ruleSet chesseract.RuleSet, players []game.Player) (client.GameSession, error) {
 	newgame := web.NewGameRequest{
-		RuleSet: "Boring2D",
+		RuleSet: ruleSet.String(),
 	}
 	for _, pl := range players {
 		newgame.PlayerNames = append(newgame.PlayerNames, pl.Name)

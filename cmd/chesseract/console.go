@@ -18,14 +18,21 @@ var consoleMutex sync.Mutex
 func consoleGame(conf *Config, args []string) error {
 	logVerbose := false
 	clientConf := httpclient.ClientConfig{}
+	var ruleset string
 
 	consoleSettings := flag.NewFlagSet("consoleClient", flag.ContinueOnError)
 	consoleSettings.StringVar(&clientConf.ServerURI, "server", "", "URI to multiplayer server")
 	consoleSettings.StringVar(&clientConf.Username, "username", "", "Online username")
+	consoleSettings.StringVar(&ruleset, "ruleset", "Chesseract", "Rule set to use for new games")
 	consoleSettings.BoolVar(&logVerbose, "v", false, "Verbosely log all requests")
 	err := consoleSettings.Parse(args)
 	if err != nil {
 		return err
+	}
+
+	rs := chesseract.GetRuleSet(ruleset)
+	if rs == nil {
+		return fmt.Errorf("unknown ruleset '%s'", ruleset)
 	}
 
 	if logVerbose {
@@ -51,7 +58,7 @@ func consoleGame(conf *Config, args []string) error {
 	if len(ag) > 0 {
 		g = ag[0]
 	} else {
-		g, err = c.NewGame(ctx, []game.Player{
+		g, err = c.NewGame(ctx, rs, []game.Player{
 			{Name: "alice"},
 			{Name: "bob"},
 		})
@@ -72,6 +79,19 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
+	var ruleset string
+	local1v1Settings := flag.NewFlagSet("consoleClient", flag.ContinueOnError)
+	local1v1Settings.StringVar(&ruleset, "ruleset", "Chesseract", "Rule set to use for new games")
+	err := local1v1Settings.Parse(args)
+	if err != nil {
+		return err
+	}
+
+	rs := chesseract.GetRuleSet(ruleset)
+	if rs == nil {
+		return fmt.Errorf("unknown ruleset '%s'", ruleset)
+	}
+
 	players := []game.Player{
 		{Name: "white"},
 		{Name: "black"},
@@ -82,7 +102,7 @@ func consoleLocalMultiplayer(conf *Config, args []string) error {
 	s := New1v1()
 
 	var run = func(c client.Client) {
-		g, err := c.NewGame(ctx, players)
+		g, err := c.NewGame(ctx, rs, players)
 		if err != nil {
 			errs <- err
 			return
