@@ -33,7 +33,7 @@ func (p position4D) CellColour() Colour {
 }
 
 func (p position4D) WorldPosition() (x, y, z float32) {
-	y = (float32(p[2]) - 2.5) * 3.6
+	y = (float32(p[2]) - 1.5) * 3.6
 	x = float32(p[0]) - 2.5
 	z = (float32(p[1]) - 2.5) + 9*(float32(p[3])-2.5)
 	return
