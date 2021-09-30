@@ -16,6 +16,8 @@ func (match Match) DebugDump(w io.Writer, highlight []Position) {
 
 	if _, ok := match.RuleSet.(Boring2D); ok {
 		match.dumpBoring2DBoard(w, highlight)
+	} else if _, ok := match.RuleSet.(Chesseract); ok {
+		match.dumpHyperboard(w, highlight)
 	} else {
 		match.dumpUnknownBoard(w, highlight)
 	}
@@ -79,6 +81,76 @@ func (match Match) dumpBoring2DBoard(w io.Writer, highlight []Position) {
 		fmt.Fprintf(w, " %c ", 'a'+rune(x))
 	}
 	fmt.Fprintf(w, "\n")
+}
+
+func (match Match) dumpHyperboard(out io.Writer, highlight []Position) {
+	match.dumpUnknownBoard(out, highlight)
+	var x, y, z, w int
+
+	fmt.Fprintf(out, "   ")
+	for w = 0; w < 6; w++ {
+		fmt.Fprintf(out, "   ---------%d-------- ", w+1)
+	}
+	fmt.Fprintf(out, "\n")
+
+	fmt.Fprintf(out, "    ")
+	for w = 0; w < 6; w++ {
+		fmt.Fprintf(out, "  ")
+		for x = 0; x < 6; x++ {
+			fmt.Fprintf(out, " %c ", 'a'+rune(x))
+		}
+		fmt.Fprintf(out, "  ")
+	}
+	fmt.Fprintf(out, "\n")
+	for z = 5; z >= 0; z-- {
+		fmt.Fprintf(out, "   ")
+		for w = 0; w < 6; w++ {
+			fmt.Fprintf(out, "  +------------------+")
+		}
+		fmt.Fprintf(out, "\n")
+		for y = 5; y >= 0; y-- {
+			if y == 3 {
+				fmt.Fprintf(out, "%c| ", 'm'+rune(z))
+			} else {
+				fmt.Fprintf(out, " | ")
+			}
+			fmt.Fprintf(out, "%d", y+1)
+			for w = 0; w < 6; w++ {
+				fmt.Fprintf(out, " |")
+				for x = 0; x < 6; x++ {
+					match.dumpCell(out, position4D{x, y, z, w}, highlight)
+				}
+				fmt.Fprintf(out, "| ")
+			}
+			fmt.Fprintf(out, "%d", y+1)
+			if y == 3 {
+				fmt.Fprintf(out, " |%c\n", 'm'+rune(z))
+			} else {
+				fmt.Fprintf(out, " |\n")
+			}
+		}
+		fmt.Fprintf(out, "   ")
+		for w = 0; w < 6; w++ {
+			fmt.Fprintf(out, "  +------------------+")
+		}
+		fmt.Fprintf(out, "\n")
+	}
+
+	fmt.Fprintf(out, "    ")
+	for w = 0; w < 6; w++ {
+		fmt.Fprintf(out, "  ")
+		for x = 0; x < 6; x++ {
+			fmt.Fprintf(out, " %c ", 'a'+rune(x))
+		}
+		fmt.Fprintf(out, "  ")
+	}
+	fmt.Fprintf(out, "\n")
+
+	fmt.Fprintf(out, "   ")
+	for w = 0; w < 6; w++ {
+		fmt.Fprintf(out, "   ---------%d-------- ", w+1)
+	}
+	fmt.Fprintf(out, "\n")
 }
 
 func (match Match) dumpUnknownBoard(w io.Writer, highlight []Position) {
